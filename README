@@ -1,0 +1,8 @@
+This project runs a MonteCarlo simulation of PLS as a streaming MapReduce job.
+
+Content of the files
+
+input.txt: A text file that contains a list of the replication numbers that will be executed.
+main.R: The main file that will run the MapReduce job in a single thread locally. The job runs for a long time, so this is only for testing.
+map.R: Map executable
+reduce.R: Reduce executable
