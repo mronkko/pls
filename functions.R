@@ -14,7 +14,7 @@
 # Generates a random PLS design as a lower triangular matrix.
 #
 
-generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths,populationPathValues){
+generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths){
 
 	#Probability of path being specified is the expected number of paths divided by the number of possible paths
 	pathProbability<-expectedNumberOfOutgoingPaths*numberOfConstructs/(numberOfConstructs^2-numberOfConstructs)
@@ -25,10 +25,9 @@ generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths,p
 	#Set the upper triangle and diagonal to zeros
 	populationModel <- populationModel*lower.tri(populationModel)
 	
-	#Ensure that the model is a valid PLS design
-	populationModel<-ensureThatModelIsValid(model)
+	#Ensure that the model is a valid PLS design and return it
 	
-	return(populationModel)
+	return(ensureThatModelIsValid(populationModel))
 
 }
 
@@ -36,7 +35,7 @@ generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths,p
 # Ensures that the matrix is a valid PLS design. If not, then add paths until it is.
 #
 
-ensureThatModelIsValid<-function(model)	
+ensureThatModelIsValid<-function(model){	
 
 	pathcount <- colSums(model) + rowSums(model)
 	
@@ -74,9 +73,9 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 	
 	continue<-TRUE
 	
-	while(true){
+	while(continue){
 		populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
-		
+
 		# Finally, we need to ensure that the model is valid. We do this by
 		# generating the population covariance matrix for the models by applying  # tracing rules, then setting the variances to 1 and testing if this is
 		# a valid correlation matrix
@@ -89,7 +88,7 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 		# Fill in the lower diagonal with covariances.
 		for(row in 2:nrow(populationModel)){
 			for(col in 1:(row-1)){
-				sigma[row,col]=populationModel[row,]*sigma[,col]
+				sigma[row,col]=sum(populationModel[row,]*sigma[,col])
 			}
 		}
 		
@@ -102,4 +101,26 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 	}
 	
 	return(list(paths=populationModel,covariances=sigma))
+}
+
+#
+# Generates a model that is tested by altering paths. The model is a 
+# valid PLS design.
+#
+
+generateTestedModel<-function(populationModelWhichPaths,omittedPathsShare,extraPaths){
+	
+	#Remove paths based on expected percentage of omitted paths
+
+	testedModel<-populationModelWhichPaths*(runif(length(populationModelWhichPaths))>=omittedPathsShare)
+	
+	#Add paths based on expected number of extra paths.
+	
+	possibleNewPaths<-(length(testedModel)^2-length(testedModel))/2- sum(populationModelWhichPaths)
+	expectedNewPaths<-extraPaths * (length(testedModel)-1)
+	probabilityForNewPath <- expectedNewPaths/possibleNewPaths
+	
+	testedModel<-testedModel + ((!populationModelWhichPaths) & (runif(length(testedModel)) < probabilityForNewPath ))*lower.tri(populationModelWhichPaths)
+
+	return(ensureThatModelIsValid(testedModel))
 }
