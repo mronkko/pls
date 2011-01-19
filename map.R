@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 #
-# This file is the mapper of MapReduce.
+# This file is the mapper of MapReduce. It just passes the lines to Reducers.
 #
 
 
