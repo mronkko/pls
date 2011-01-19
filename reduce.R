@@ -65,10 +65,14 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# Calculate some statistics that need to be calculated over all analyses
 	# done for this particular data set
 	
+	# TODO: Calculate correlations for each construc over all estimated models.
+	# This is is a measure of factor indeterminancy or measurement invariance
 	
 	#Print the results. Start with the full specification string
 	
 	cat(fullspecification,"\n",sep="")
+	
+	#TODO: Write print out results and document as comment
 }
 
 close(con)

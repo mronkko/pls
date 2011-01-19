@@ -176,11 +176,11 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 	# correlate in the population
 
 	# Start with random correlation matrix
-	R <- rcorr(indicatorCount*constructcount)
+	R <- rcorr(indicatorCount*constructCount)
 	
 	# Scale the correlations with the maximum error correlation. Keep the diagonals as one
 	
-	R<-R*maxErrorCorrelation+(1-maxErrorCorrelation)*diag(indicatorCount*constructcount)
+	R<-R*maxErrorCorrelation+(1-maxErrorCorrelation)*diag(indicatorCount*constructCount)
 	
 	# Generate a transformation matrix that scales the correlation matrix to be # a covariance matrix with the SDs of disturbances on the diagonal
 	
@@ -211,4 +211,155 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 #
 
 estimateWithRegression<-function(model,data){
+	
+	constructCount=ncol(model)
+	indicatorsPerConstruct=ncol(data)/constructCount
+	sampleSize=nrow(data)
+	paths<-NULL
+	
+	#Form standardized summed scales
+	
+	sumscales<-data.frame(row.names =c(1:sampleSize))
+	
+	for ( i in 1:constructcCount ){
+		sumscales<-cbind(sumscales,Make.Z(rowMeans(indicators[((i-1)*indicatorCount+1):(i*indicatorCount)])))
+		
+	}
+	
+	names(sumscales)<-str_c("C",c(1:constructCount))
+
+	#Use the generated scores to evaluate regression paths that were included in the model
+
+	modelRowSums<-rowSums(model)
+	
+	for ( i in 1:constructCount ){
+
+		#Only proceed with the regression if the variable is endogenous
+		
+		if(modelRowSums[i]>0){
+			
+			# Form the regression equation
+			
+			independents <-colnames(model)[which(as.logical(model[i,]))]
+			dependent<-rownames(model)[i]
+			
+			formulastr<-paste(dependent,paste(independents,collapse=" + "),sep=" ~ ")
+			
+			formulaobj<-as.formula(formulastr)
+
+			
+			#Store summary of the results as object. We will next extract the coefficients and their standard errors from this object
+
+			tempresults<-lm(formulaobj,data=sumscales)
+
+			stdcoefficients<-summary(tempresults)$coefficients
+
+			for(k in 2:nrow(stdcoefficients)){
+				
+				#"From","To","Value","StandardError","ModelingTechnique"
+				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],stdcoefficients[[k,2]],"regress")
+
+				paths<-rbind(paths,newrow)
+			}
+		}
+	}
+	
+	#Return the construct scores and path estimates
+	
+	return(list(constructs=sumscales,paths=paths))
+}
+
+estimateWithSemPLS<-function(model,data){
+
+	constructCount=ncol(model)
+	indicatorsPerConstruct=ncol(data)/constructCount
+	sampleSize=nrow(data)
+	paths<-NULL
+
+	# Parameters that determine what kind of PLS run we do
+	
+	indicatorModes<-"A"
+	weightingScheme<-"A"
+	signCorrection<-"ConstructLevelChanges"
+		
+	#The models are matrixes in the form "from to"
+	
+	modelpaths<-c()
+		
+	for ( i in 1:constructCount ){
+		for ( j in 1:constructCount){
+			if(model[i,j]==1) {
+				#Path from variable on the colum to variable on row
+				modelpaths <-c(modelpaths,paste("C",j,sep=""),paste("C",i,sep=""))
+			}
+	    }
+	}
+	
+	loadings<-c()
+	
+	for(i in 1:ncol(indicators)){
+		loadings<-c(loadings,paste("C",ceiling(i/indicatorCount),sep=""),paste("i",i,sep=""))
+	}
+
+	#Inner model is a "from to" list
+	
+	innermodel<-matrix(modelpaths, ncol=2, nrow=length(modelpaths)/2,byrow = TRUE)
+
+	outermodel <-matrix(data = loadings, ncol=2,nrow=length(loadings)/2,byrow = TRUE)
+
+	semPLS <- sempls(plsm(indicators, strucmod=innermodel, measuremod=outermodel),indicators,maxit=100,E=weightingschemes)
+			
+	plspaths<-semPLS$coefficients[grep("beta",row.names(semPLS$coefficients)),]
+			
+	#Sort the list so that the paths are in alphabetical order
+	plspaths<-plspaths[sort.list(row.names(plspaths)),]
+			
+	#Parse "To" and "From" as new colums for plspaths 
+	plspaths$To<-sub(".*-> ","",plspaths$Path,perl=TRUE)
+	plspaths$From<-sub(" ->.*","",plspaths$Path,perl=TRUE)
+
+	#Store construct scores
+			
+	constructs<-semPLS$factor_scores
+			
+	# Then bootstrap the model.
+
+	#Bootstrappping does not always converge, so we need to do exception handling
+	
+	semPLSboot<-NULL
+				
+	#Tolerate 5 errors and then move on. Most typical error is 10 consecutive convergence failures.
+
+	counter<-0
+
+	while(is.null(semPLSboot)&counter<=5){
+		counter<-counter+1
+		tryCatch(
+			semPLSboot<-bootsempls(semPLS, method=signcorrections[signindex],nboot=100)
+			,error = function(e){}
+		)
+	}	
+
+	#Store the bootstrap results and PLS results
+
+	if(!is.null(semPLSboot)){
+	
+		# Store the boot strapped estimates 
+		
+		boottable<-summary(semPLSboot)$table
+	
+		#Filter out everything but betas and sort
+		boottable<-boottable[grep("beta",row.names(boottable)),]
+				
+		boottable<-boottable[sort.list(row.names(boottable)),]
+
+		#"From","To","Value","StandardError","ModelingTechnique"
+		paths<-cbind(plspaths$From,plspaths$To,boottable$Estimate,boottable$Std.Error, "sempls")
+	}
+	
+	return(list(constructs=constructs,paths=paths))
+}
+
+estimateWithPlspm<-function(model,data){
+	#TODO: Write this function
 }
