@@ -67,7 +67,11 @@ for(replicationNumber in 1:replications){
 										#write a progress indicator on screen
 										print(paste(counter,"-",replicationNumber,"/",replications," ",numberOfConstructsIndex,"/",length(numberOfConstructs)," ",expectedNumberOfOutgoingPathsIndex,"/",length(expectedNumberOfOutgoingPaths)," ",populationPathValuesIndex,"/",length(populationPathValues)," ",sampleSizeIndex,"/",length(sampleSizes)," ",indicatorCountIndexs,"/",length(indicatorCounts)," ",factorLoadingIndex,"/",length(factorLoadings)," ",factorLoadingIntervalIndex,"/",length(factorLoadingIntervals)," ",maxErrorCorrelationIndex,"/",length(maxErrorCorrelations)," ",methodVarianceIndex,"/",length(methodVariances),sep=""))
 
-
+										print(populationModel$covariances)
+										print(populationModel$paths)
+										
+										print(matrix(testedModels,ncol=ncol(populationModel$paths)))
+										
 										# Write the population model, tested model and 
 										# simulation paramaters to a file that will be used as 
 										# input for MapReduce

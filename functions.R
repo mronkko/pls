@@ -5,14 +5,17 @@
 #library(Matrix)
 #library(stringr)
 #library(ggm)
-#library(QuantPsyc)
+
+# Needed for standardization and other convenience functions
+library(QuantPsyc)
+
 #library(monomvn)
 
+# The PLS packages
 library(plspm)
 library(semPLS)
 
-# Needed for generating random correlation matrices
-library(Hmisc)
+# library(Hmisc)
 
 # Needed for generating data from covariance matrices
 library(MASS)
@@ -29,8 +32,8 @@ generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths){
 	#Create a vector of 1s and 0s to store the structural model
 	populationModel <- matrix(runif(numberOfConstructs)<pathProbability,numberOfConstructs,numberOfConstructs)
 	
-	#Set the upper triangle and diagonal to zeros
-	populationModel <- populationModel*lower.tri(populationModel)
+	#Set the upper triangle and diagonal to NA
+	populationModel[upper.tri(populationModel,diag=TRUE)] <- NA
 	
 	#Ensure that the model is a valid PLS design and return it
 	
@@ -44,7 +47,7 @@ generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths){
 
 ensureThatModelIsValid<-function(model){	
 
-	pathcount <- colSums(model) + rowSums(model)
+	pathcount <- colSums(model,na.rm=TRUE) + rowSums(model,na.rm=TRUE)
 	
 	numberOfConstructs<-ncol(model)
 	
@@ -79,7 +82,7 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 	
 	
 	continue<-TRUE
-	
+	print(populationModelWhichPaths)
 	while(continue){
 		populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
 
@@ -95,7 +98,8 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 		# Fill in the lower diagonal with covariances.
 		for(row in 2:nrow(populationModel)){
 			for(col in 1:(row-1)){
-				sigma[row,col]=sum(populationModel[row,]*sigma[,col])
+				print(sigma)
+				sigma[row,col]=sum(populationModel[row,]*sigma[,col],na.rm=TRUE)
 			}
 		}
 		
@@ -114,6 +118,12 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 # Generates a model that is tested by altering paths. The model is a 
 # valid PLS design.
 #
+
+#TODO: This does not work correctly
+# [5,]   NA   NA   NA   NA
+# [6,]   NA   NA   NA    0
+# [7,]   NA   NA   NA   NA
+# [8,]    1    1   NA    1
 
 generateTestedModel<-function(populationModelWhichPaths,omittedPathsShare,extraPaths){
 	
@@ -146,16 +156,20 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 	constructs <- mvrnorm(n=sampleSize,rep(0,constructCount),populationCovariances)
 
 	#Create a method factor
-	methodFactor<-rnorm(sample,sd=sqrt(methodVariance))
+	methodFactor<-rnorm(sampleSize,sd=sqrt(methodVariance))
 
 	# Calculate indicators
 	
-	factorLoadingValues<-factorLoading+(runif(constructCount*indicatorCount)-.5)*2*factorLoadingInterval
+factorLoadingValues<-factorLoading+(runif(constructCount*indicatorCount)-.5)*2*factorLoadingInterval
 
-	# R mupltiplies matrices by vectors by going through rows first and colums
-	# second. Due to this, we need to transpose twice. 
+	# Calculate the model implied part of indicators
 	
-	indicatorBase <- t(t(constructs)*factorLoadingValues)
+	indicatorBase<-NULL
+	for(construct in 1:constructCount){
+		for(indicator in 1:indicatorCount){
+			indicatorBase<-cbind(indicatorBase,constructs[,construct]*factorLoadingValues[construct*(indicatorCount-1)+indicator])
+		}
+	}
 	
 	# Calculate how much variance is left for error variance
 	
@@ -166,8 +180,8 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 	
 	methodVariances=min(methodVariance,errorTermVariances)
 	
-	methodVarianceComponent <- rnorm(sample) %o% methodVariances
-
+	methodVarianceComponent <- matrix(rep(rnorm(sampleSize) %o% methodVariances,constructCount*indicatorCount),ncol=constructCount*indicatorCount)
+	
 	# Update error term variances now that we have added method variance
 
 	errorTermVariances<- errorTermVariances-methodVariances
@@ -176,8 +190,9 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 	# correlate in the population
 
 	# Start with random correlation matrix
-	R <- rcorr(indicatorCount*constructCount)
-	
+	R <- matrix((runif((constructCount*indicatorCount)^2)*2-1)*.1, ncol=constructCount*indicatorCount)
+	RtR <- R %*% t(R)
+	R<-cov2cor(RtR)	
 	# Scale the correlations with the maximum error correlation. Keep the diagonals as one
 	
 	R<-R*maxErrorCorrelation+(1-maxErrorCorrelation)*diag(indicatorCount*constructCount)
@@ -189,17 +204,21 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 	#Scale the correlation matrix to be error covariance matrix
 	errorCovarianceMatrix <- R * transmat
 
-	# Ensure that the error covariance matrix is positive definite and generate
+	# Generate
 	# error terms
 	
-	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),posdef.approx(errorCovarianceMatrix))
+	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),errorCovarianceMatrix)
 
-	indicators=indicatorBase+methodVarianceComponent+errorTerms
+	# Indicators are asum of the components
+	indicators=data.frame(indicatorBase+methodVarianceComponent+errorTerms)
 
-	names(indicators)<-str_c("i",1:ncol(indicators))
+	# Standardize the indicators
+	indicators<-Make.Z(indicators)
+	
+	names(indicators)<-paste("i",1:ncol(indicators),sep="")
 
 	#T as True score
-	names(constructs)<-str_c("T",1:ncol(constructs))
+	names(constructs)<-paste("T",1:ncol(constructs),sep="")
 
 	#Return the data
 	
@@ -213,7 +232,7 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 estimateWithRegression<-function(model,data){
 	
 	constructCount=ncol(model)
-	indicatorsPerConstruct=ncol(data)/constructCount
+	indicatorCount=ncol(data)/constructCount
 	sampleSize=nrow(data)
 	paths<-NULL
 	
@@ -221,12 +240,12 @@ estimateWithRegression<-function(model,data){
 	
 	sumscales<-data.frame(row.names =c(1:sampleSize))
 	
-	for ( i in 1:constructcCount ){
-		sumscales<-cbind(sumscales,Make.Z(rowMeans(indicators[((i-1)*indicatorCount+1):(i*indicatorCount)])))
+	for ( i in 1:constructCount ){
+		sumscales<-cbind(sumscales,data[c(((i-1)*indicatorCount+1):(i*indicatorCount))])
 		
 	}
 	
-	names(sumscales)<-str_c("C",c(1:constructCount))
+	names(sumscales)<-paste("C",c(1:constructCount),sep="")
 
 	#Use the generated scores to evaluate regression paths that were included in the model
 
@@ -272,7 +291,7 @@ estimateWithRegression<-function(model,data){
 estimateWithSemPLS<-function(model,data){
 
 	constructCount=ncol(model)
-	indicatorsPerConstruct=ncol(data)/constructCount
+	indicatorCount=ncol(data)/constructCount
 	sampleSize=nrow(data)
 	paths<-NULL
 
@@ -361,5 +380,19 @@ estimateWithSemPLS<-function(model,data){
 }
 
 estimateWithPlspm<-function(model,data){
-	#TODO: Write this function
+	
+	constructCount=ncol(model)
+	indicatorCount=ncol(data)/constructCount
+	
+	#Start by constructing with inner and outer model matrixes. 
+		
+	outer <- list()
+	
+	for ( i in 1:constructCount ){
+		outer[[i]] <- c(((i-1)*indicatorCount+1):(i*indicatorCount))
+	}
+	
+	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", boot.val=TRUE)
+
+	return(constructs=plsResults$latents,paths=plsResults$boot)
 }
