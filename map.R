@@ -9,6 +9,6 @@ con <- file("stdin", open = "r")
 
 
 while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
-    cat(line)
+    cat(line,"\n",sep="")
 }
 close(con)

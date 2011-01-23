@@ -42,18 +42,25 @@ generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths){
 }
 
 #
-# Ensures that the matrix is a valid PLS design. If not, then add paths until it is.
+# Ensures that the matrix is a valid PLS design. If not, then add paths until it 
+# is. There are two criterion that the model must fulfill
+# 1) Each construct must be linked to at least one other with a regression path
+# 2) It must be possible to go from one construct to every other by following 
+# the regression paths
 #
 
 ensureThatModelIsValid<-function(model){	
 
+	# Condition 1
+	
 	pathcount <- colSums(model,na.rm=TRUE) + rowSums(model,na.rm=TRUE)
 	
 	numberOfConstructs<-ncol(model)
 	
 	for(i in 1:numberOfConstructs){
 	
-		#All constructs must have at least one emitted or received path for the model to be valid.
+		# All constructs must have at least one emitted or received path for the 
+		# model to be valid. (Condition 1)
 		
 		if(pathcount[i]==0){
 	
@@ -67,6 +74,41 @@ ensureThatModelIsValid<-function(model){
 			}
 			model[row,col]<-1
 		}
+		
+	}
+	
+	# Condition 2. (There is probably a more elegent way to do this.)
+	
+	# Create a test matrix that records indirect relationships. If all 
+	# constructs are connected, the all indirect relationships should be present 
+	# if we convert each directional regression path to bidirectional.
+	# If the model does not pass this test, add one non-redundant path and
+	# repeat the test
+	
+	testMatrix<-model
+	continue<-TRUE
+	
+	found<-FALSE
+	while(continue){
+		for(i in 1:numberOfConstructs){
+
+			# Mark all variables that predict or depend on the i:th construct as 
+			# connected in the testMatrix
+		
+			temp<-testMatrix[i,]|testMatrix[,i]
+			testMatrix<-testMatrix | outer(temp,temp)
+		}
+		
+		if(! is.na(min(testMatrix))){
+			continue<-FALSE
+		}
+		else{
+			# Choose one of the non-existing paths and add it to the model
+			indexForNewPath<-sample(which(is.na(testMatrix)&lower.tri(testMatrix)),1)
+			model[indexForNewPath]<-1
+			testMatrix[indexForNewPath]<-TRUE
+		}
+		
 	}
 	return(model)
 }	
@@ -82,7 +124,7 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 	
 	
 	continue<-TRUE
-	print(populationModelWhichPaths)
+
 	while(continue){
 		populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
 
@@ -98,7 +140,6 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 		# Fill in the lower diagonal with covariances.
 		for(row in 2:nrow(populationModel)){
 			for(col in 1:(row-1)){
-				print(sigma)
 				sigma[row,col]=sum(populationModel[row,]*sigma[,col],na.rm=TRUE)
 			}
 		}
@@ -128,18 +169,20 @@ setPopulationModelPathValues <- function(populationModelWhichPaths,populationPat
 generateTestedModel<-function(populationModelWhichPaths,omittedPathsShare,extraPaths){
 	
 	#Remove paths based on expected percentage of omitted paths
-
 	testedModel<-populationModelWhichPaths*(runif(length(populationModelWhichPaths))>=omittedPathsShare)
 	
 	#Add paths based on expected number of extra paths.
 	
-	possibleNewPaths<-(length(testedModel)^2-length(testedModel))/2- sum(populationModelWhichPaths)
-	expectedNewPaths<-extraPaths * (length(testedModel)-1)
+	possibleNewPaths<-(length(testedModel)-ncol(testedModel))/2- sum(populationModelWhichPaths,na.rm =TRUE)
+	expectedNewPaths<-extraPaths * (ncol(testedModel)-1)
 	probabilityForNewPath <- expectedNewPaths/possibleNewPaths
+
 	
 	testedModel<-testedModel + ((!populationModelWhichPaths) & (runif(length(testedModel)) < probabilityForNewPath ))*lower.tri(populationModelWhichPaths)
 
-	return(ensureThatModelIsValid(testedModel))
+	testedModel<-ensureThatModelIsValid(testedModel)
+
+	return(testedModel)
 }
 
 #

@@ -59,7 +59,9 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 	results<-list()
 	
-	print(specification)
+	print(matrix(specification[12:length(specification)],ncol=4,byrow=TRUE))
+	
+	stop("debug")
 	
 	for(testedModelIndex in 1:testedModelCount){
 		results[testedModelIndex]<-list()
@@ -103,7 +105,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	}
 	
 	
-	#Print the results. Start with the full specification string (input line)
+	# Print the results. Start with the full specification string (input line)
 	
 	cat(line,"\n",sep="")
 

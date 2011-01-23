@@ -24,4 +24,4 @@ methodVariances<-c(0,.1,.2)
 # Parameters related to tested models (3 x 3 = 9 combinations)
 
 omittedPathsShare<-c(0,.25,.5)
-extraPaths<-c(1,2,3)
+extraPaths<-c(0,1,2)
