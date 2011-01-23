@@ -19,6 +19,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# Parse the specification for this set of replications
 
 	specification<-sapply(unlist(strsplit(line, split="\t")),as.numeric)
+
 	
 	# Setting colnames will help in debugging
 	names(specification)<-c(1:length(specification))
@@ -27,6 +28,9 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# replication. 
 	
 	counter<-specification[1]
+
+	debugPrint(paste("Start of reduce task",counter))
+
 	populationModelNumber<-specification[2]
 	numberOfConstructsIndex<-specification[3]
 	expectedNumberOfOutgoingPathsIndex<-specification[3]
@@ -59,27 +63,30 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 	results<-list()
 	
-	print(matrix(specification[12:length(specification)],ncol=4,byrow=TRUE))
-	
-	stop("debug")
-	
+	# Temporarily for debugging just run two models
+
 	for(testedModelIndex in 1:testedModelCount){
-		results[testedModelIndex]<-list()
-		testedModel<-matrix(specification[(13+matrixLength*(testedModelIndex+1)):(12+matrixLength*(testedModelIndex+2))],ncol=sqrt(matrixLength))
-		
-		print(paste(testedModelIndex,13+matrixLength*(testedModelIndex+1),12+matrixLength*(testedModelIndex+2)))
-		print(testedModel)
+		results[[testedModelIndex]]<-list()
+		testedModel<-matrix(specification[(12+matrixLength*(testedModelIndex+1)):(11+matrixLength*(testedModelIndex+2))],ncol=sqrt(matrixLength))
 		
 		# Model estimation requires that the names are correctly included
 		colnames(testedModel)<-paste("C",c(1:constructCount),sep="")
 		rownames(testedModel)<-paste("C",c(1:constructCount),sep="")
 		
 		# Write code for testing the model
+
+		debugPrint("Start regression")
 		
-		# results[testedModelIndex]$regression <- estimateWithRegression(testedModel,data$indicators)
+		results[[testedModelIndex]]$regression <- estimateWithRegression(testedModel,data$indicators)
 		
-		# results[testedModelIndex]$plspm <- estimateWithPlspm(testedModel,data$indicators)
+		debugPrint("Start pls")
+
+		results[[testedModelIndex]]$plspm <- estimateWithPlspm(testedModel,data$indicators)
 		
+		# semPLS is very slow compared to plspm. The initial plan was to run the
+		# PLS analyses twice, but to save computing time, this is now dropped
+		# The line is here as a reminder, but the funtion that it calls has not
+		# been really tested
 		# results[testedModelIndex]$sempls <- estimateWithSemPLS(testedModel,data$indicators)
 
 	}
@@ -94,17 +101,31 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# with the mean values
 	#
 
-	for(modelTypeIndex in 1:length(results)){
+	debugPrint("Calculate construct means")
+
+	# There is probably a more elegant way to do this than using two nested 
+	# loops.
 	
+	constructMeans<-list()
+	for(modelTypeIndex in 1:length(results[[1]])){
+
 		constructSums<-NULL
 		
 		for(testedModelIndex in 1:testedModelCount){
-			constructSums<-constructSums+results[[testedModelIndex]][[modelTypeIndex]]$constructs
+			
+			if(is.null(constructSums)){
+				constructSums<-results[[testedModelIndex]][[modelTypeIndex]]$constructs
+			}
+			else{
+				constructSums<-constructSums+results[[testedModelIndex]][[modelTypeIndex]]$constructs
+			}
 		}
-		constructMeans[[modelTypeIndex]]=construcSums/length(results)
+
+		constructMeans[[modelTypeIndex]]=constructSums/testedModelCount
 	}
 	
-	
+	debugPrint("Start reporting")
+
 	# Print the results. Start with the full specification string (input line)
 	
 	cat(line,"\n",sep="")
@@ -113,21 +134,39 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 	#Loop over replications and model types. Print the resutls as lines.
 	
-	for(modelTypeIndex in 1:length(results)){
+	for(modelTypeIndex in 1:length(results[[1]])){
+		
+		cat("\n",names(results[[1]])[modelTypeIndex],"\n")
 	
 		for(testedModelIndex in 1:testedModelCount){
+	
+			cat(names(results)[testedModelIndex],"\n")
 			
-			#Print a matrix of path coefficients
-			
-			#Print a matrix of standard errors
-			
+			resultObj<-results[[testedModelIndex]][[modelTypeIndex]]
+
+			#Print path coefficients
+			debugPrint("Paths")
+			write.table(resultObj$paths,sep="\t",row.names=FALSE,col.names=FALSE)
+
+
 			#Print a correlation matrix of construct scores and true scores
-			
+			debugPrint("Construct correlations")
+			write.table(cor(resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+
+			#Print a correlation matrix of construct scores and true scores
+			debugPrint("True score correlations")
+			write.table(cor(data$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+
 			#Print item-construct correlation matrix
-			
+			debugPrint("Item-construct cross-loading matrix")
+			write.table(cor(data$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+
 			#Print a vector of correlations with mean of construct estimates
+			debugPrint("Construct correlations with mean construct estimates")
+			write.table(t(diag(cor(constructMeans[[modelTypeIndex]],resultObj$constructs))),sep="\t",row.names=FALSE,col.names=FALSE)
 		}
 	}
+	debugPrint(paste("End of reduce task",counter))
 
 }
 

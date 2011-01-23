@@ -6,8 +6,6 @@
 #library(stringr)
 #library(ggm)
 
-# Needed for standardization and other convenience functions
-library(QuantPsyc)
 
 #library(monomvn)
 
@@ -202,8 +200,7 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 	methodFactor<-rnorm(sampleSize,sd=sqrt(methodVariance))
 
 	# Calculate indicators
-	
-factorLoadingValues<-factorLoading+(runif(constructCount*indicatorCount)-.5)*2*factorLoadingInterval
+	factorLoadingValues<-factorLoading+(runif(constructCount*indicatorCount)-.5)*2*factorLoadingInterval
 
 	# Calculate the model implied part of indicators
 	
@@ -256,20 +253,20 @@ factorLoadingValues<-factorLoading+(runif(constructCount*indicatorCount)-.5)*2*f
 	indicators=data.frame(indicatorBase+methodVarianceComponent+errorTerms)
 
 	# Standardize the indicators
-	indicators<-Make.Z(indicators)
-	
-	names(indicators)<-paste("i",1:ncol(indicators),sep="")
+	indicators<-as.data.frame(scale(indicators))
+	colnames(indicators)<-paste("i",1:ncol(indicators),sep="")
 
 	#T as True score
-	names(constructs)<-paste("T",1:ncol(constructs),sep="")
+	constructs<-as.data.frame(constructs)
+	colnames(constructs)<-paste("T",1:ncol(constructs),sep="")
 
 	#Return the data
 	
-	return(list(constructs=as.data.frame(constructs), factorLoadings=factorLoadingValues, indicators=as.data.frame(indicators)))
+	return(list(constructs=constructs, factorLoadings=factorLoadingValues, indicators=indicators))
 }
 
 #
-# Estimates one a path model with regression and summed scales
+# Estimates a path model with regression and summed scales
 #
 
 estimateWithRegression<-function(model,data){
@@ -284,15 +281,17 @@ estimateWithRegression<-function(model,data){
 	sumscales<-data.frame(row.names =c(1:sampleSize))
 	
 	for ( i in 1:constructCount ){
-		sumscales<-cbind(sumscales,data[c(((i-1)*indicatorCount+1):(i*indicatorCount))])
+		sumscales<-cbind(sumscales,rowSums(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))]))
 		
 	}
 	
-	names(sumscales)<-paste("C",c(1:constructCount),sep="")
+	sumscales<-as.data.frame(scale(sumscales))
+	colnames(sumscales)<-paste("C",c(1:constructCount),sep="")
 
+	
 	#Use the generated scores to evaluate regression paths that were included in the model
 
-	modelRowSums<-rowSums(model)
+	modelRowSums<-rowSums(model,na.rm = TRUE)
 	
 	for ( i in 1:constructCount ){
 
@@ -318,8 +317,8 @@ estimateWithRegression<-function(model,data){
 
 			for(k in 2:nrow(stdcoefficients)){
 				
-				#"From","To","Value","StandardError","ModelingTechnique"
-				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],stdcoefficients[[k,2]],"regress")
+				#"From","To","Estimates value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
+				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA,"regress")
 
 				paths<-rbind(paths,newrow)
 			}
@@ -331,25 +330,25 @@ estimateWithRegression<-function(model,data){
 	return(list(constructs=sumscales,paths=paths))
 }
 
+#
+# Estimates a model with SemPLS and bootstraps the model. This could probably be 
+# written in much more compact form.
+#
+
+
 estimateWithSemPLS<-function(model,data){
 
 	constructCount=ncol(model)
 	indicatorCount=ncol(data)/constructCount
-	sampleSize=nrow(data)
 	paths<-NULL
 
-	# Parameters that determine what kind of PLS run we do
-	
-	indicatorModes<-"A"
-	weightingScheme<-"A"
-	signCorrection<-"ConstructLevelChanges"
 		
-	#The models are matrixes in the form "from to"
+	# The models are matrices in the form "from to" 
 	
 	modelpaths<-c()
 		
-	for ( i in 1:constructCount ){
-		for ( j in 1:constructCount){
+	for ( i in 2:constructCount ){
+		for ( j in 1:(i-1)){
 			if(model[i,j]==1) {
 				#Path from variable on the colum to variable on row
 				modelpaths <-c(modelpaths,paste("C",j,sep=""),paste("C",i,sep=""))
@@ -357,19 +356,20 @@ estimateWithSemPLS<-function(model,data){
 	    }
 	}
 	
+	# Loadings are matrices in the from "from to"
 	loadings<-c()
 	
-	for(i in 1:ncol(indicators)){
+	for(i in 1:ncol(data)){
 		loadings<-c(loadings,paste("C",ceiling(i/indicatorCount),sep=""),paste("i",i,sep=""))
 	}
 
-	#Inner model is a "from to" list
+	# construct the matrices in the right format
 	
 	innermodel<-matrix(modelpaths, ncol=2, nrow=length(modelpaths)/2,byrow = TRUE)
 
-	outermodel <-matrix(data = loadings, ncol=2,nrow=length(loadings)/2,byrow = TRUE)
+	outermodel <-matrix(loadings, ncol=2,nrow=length(loadings)/2,byrow = TRUE)
 
-	semPLS <- sempls(plsm(indicators, strucmod=innermodel, measuremod=outermodel),indicators,maxit=100,E=weightingschemes)
+	semPLS <- sempls(plsm(data, strucmod=innermodel, measuremod=outermodel),data,maxit=300)
 			
 	plspaths<-semPLS$coefficients[grep("beta",row.names(semPLS$coefficients)),]
 			
@@ -386,18 +386,19 @@ estimateWithSemPLS<-function(model,data){
 			
 	# Then bootstrap the model.
 
-	#Bootstrappping does not always converge, so we need to do exception handling
 	
 	semPLSboot<-NULL
-				
-	#Tolerate 5 errors and then move on. Most typical error is 10 consecutive convergence failures.
+
+	# Bootstrappping does not always converge, so we need to do exception 
+	# handling. Tolerate 5 errors and then move on. Most typical error is 10 
+	# consecutive convergence failures.
 
 	counter<-0
 
 	while(is.null(semPLSboot)&counter<=5){
 		counter<-counter+1
 		tryCatch(
-			semPLSboot<-bootsempls(semPLS, method=signcorrections[signindex],nboot=100)
+			semPLSboot<-bootsempls(semPLS,nboot=100)
 			,error = function(e){}
 		)
 	}	
@@ -435,7 +436,21 @@ estimateWithPlspm<-function(model,data){
 		outer[[i]] <- c(((i-1)*indicatorCount+1):(i*indicatorCount))
 	}
 	
+	# plspm does not like NA:s in the matrix, so we will replace these with 
+	# zeros.
+	model[is.na(model)]<-0
+	
 	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", boot.val=TRUE)
 
-	return(constructs=plsResults$latents,paths=plsResults$boot)
+	# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
+	paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths,"pls")
+
+	return(list(constructs=plsResults$latents,paths=paths))
+}
+
+#
+# A wrapper for print to allow easily commenting out all unneccessary print commmands
+#
+debugPrint<-function(x){
+	print(x)
 }
