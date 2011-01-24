@@ -17,7 +17,7 @@
 source("parameters.R")
 
 # Read function definitions
-source("functions.R")
+source("prepareFunctions.R")
 
 # Keep a counters of reduce jobs and model numbers
 counter<-0
