@@ -19,6 +19,44 @@ source("parameters.R")
 # Read function definitions
 source("prepareFunctions.R")
 
+
+#
+# We start by generating a fractional factorial desing matrix.
+#
+# See the this article for details:
+# Xu, H. 2005. “A catalogue of three-level regular fractional factorial designs,” Metrika (62:2), pp. 259–281.
+#
+# The design matrix is 11-6.1 from the 234 replications set from the article
+# above.
+#
+
+generator <- matrix(c(	1,0,0,1,
+						0,1,1,2),ncol=4,byrow=TRUE)
+
+for(i in 3:5){
+	generator<-cbind(rbind(generator,0),c(rep(0,i-1),1),rbind(generator,1),rbind(generator,2))
+}
+
+#
+# permutations of a b c d e 
+#
+permutations<-matrix(c(c(0:242)%%3,c(0:242)%/%3%%3,c(0:242)%/%9%%3,c(0:242)%/%27%%3,c(0:242)%/%81),ncol=5)
+
+# Design matrix is the product of permutations and generator matrix, mod 3
+
+fullDesignMatrix<- ( permutations %*% generator ) %% 3
+
+# Get the indices from the 11-6.1 design reported in Xu, 2005
+
+print(ncol(fullDesignMatrix))
+print(nrow(fullDesignMatrix))
+
+desingMatrix<-fullDesignMatrix[,c(1,2,5,14,41,63,27,72,79,93,114)]
+
+debugPrint(desingMatrix)
+
+stop("TODO: Implement the design matrix thing here")
+
 # Keep a counters of reduce jobs and model numbers
 counter<-0
 populationModelNumber<-0
