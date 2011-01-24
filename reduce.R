@@ -15,6 +15,9 @@ con <- file("stdin", open = "r")
 #One line means population model- all tested models - one data specification combination. See prepare.R for details on the protocol.
 
 while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+
+	# Record the time that this iteration takes
+	timeStarted<-Sys.time()
 	
 	# Parse the specification for this set of replications
 
@@ -113,11 +116,15 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		
 		for(testedModelIndex in 1:testedModelCount){
 			
-			if(is.null(constructSums)){
-				constructSums<-results[[testedModelIndex]][[modelTypeIndex]]$constructs
-			}
-			else{
-				constructSums<-constructSums+results[[testedModelIndex]][[modelTypeIndex]]$constructs
+			#The results can be null if pls did not converge
+			
+			if(! is.null(results[[testedModelIndex]][[modelTypeIndex]])){
+				if(is.null(constructSums)){
+					constructSums<-results[[testedModelIndex]][[modelTypeIndex]]$constructs
+				}
+				else{
+					constructSums<-constructSums+results[[testedModelIndex]][[modelTypeIndex]]$constructs
+				}
 			}
 		}
 
@@ -144,29 +151,36 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			
 			resultObj<-results[[testedModelIndex]][[modelTypeIndex]]
 
-			#Print path coefficients
-			debugPrint("Paths")
-			write.table(resultObj$paths,sep="\t",row.names=FALSE,col.names=FALSE)
-
-
-			#Print a correlation matrix of construct scores and true scores
-			debugPrint("Construct correlations")
-			write.table(cor(resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
-
-			#Print a correlation matrix of construct scores and true scores
-			debugPrint("True score correlations")
-			write.table(cor(data$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
-
-			#Print item-construct correlation matrix
-			debugPrint("Item-construct cross-loading matrix")
-			write.table(cor(data$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
-
-			#Print a vector of correlations with mean of construct estimates
-			debugPrint("Construct correlations with mean construct estimates")
-			write.table(t(diag(cor(constructMeans[[modelTypeIndex]],resultObj$constructs))),sep="\t",row.names=FALSE,col.names=FALSE)
+			#Only print things if the model converged
+			
+			if(is.null(resultObj)){
+				cat("No convergence\n")
+			}
+			else{
+				#Print path coefficients
+				debugPrint("Paths")
+				write.table(resultObj$paths,sep="\t",row.names=FALSE,col.names=FALSE)
+	
+	
+				#Print a correlation matrix of construct scores and true scores
+				debugPrint("Construct correlations")
+				write.table(cor(resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+	
+				#Print a correlation matrix of construct scores and true scores
+				debugPrint("True score correlations")
+				write.table(cor(data$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+	
+				#Print item-construct correlation matrix
+				debugPrint("Item-construct cross-loading matrix")
+				write.table(cor(data$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+	
+				#Print a vector of correlations with mean of construct estimates
+				debugPrint("Construct correlations with mean construct estimates")
+				write.table(t(diag(cor(constructMeans[[modelTypeIndex]],resultObj$constructs))),sep="\t",row.names=FALSE,col.names=FALSE)
+			}
 		}
 	}
-	debugPrint(paste("End of reduce task",counter))
+	debugPrint(paste("End of reduce task",counter,"  ",timeStarted," - ",Sys.time()))
 
 }
 

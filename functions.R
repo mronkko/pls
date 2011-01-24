@@ -439,13 +439,23 @@ estimateWithPlspm<-function(model,data){
 	# plspm does not like NA:s in the matrix, so we will replace these with 
 	# zeros.
 	model[is.na(model)]<-0
+
+	# It is possible that the model does not converge, so we need to do some error handling. 
+
+	tryCatch(
+		plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=TRUE)
+		,error = function(e){DebugPrint(e)}
+	)
 	
-	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", boot.val=TRUE)
+	if(is.null(plsResults)){
+		return(NULL)
+	}
+	else{
+		# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
+		paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths,"pls")
 
-	# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-	paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths,"pls")
-
-	return(list(constructs=plsResults$latents,paths=paths))
+		return(list(constructs=plsResults$latents,paths=paths))
+	}
 }
 
 #
@@ -454,3 +464,8 @@ estimateWithPlspm<-function(model,data){
 debugPrint<-function(x){
 	print(x)
 }
+#
+# Gives a nicely formatted date based on a posix timestamp
+
+#
+
