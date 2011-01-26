@@ -21,39 +21,82 @@ source("prepareFunctions.R")
 
 
 #
-# We start by generating a fractional factorial desing matrix.
+# We start by generating a fractional factorial desing matrix. Running this 
+# simulation with full factorial desing is not feasible due to the number of 
+# factors.
 #
 # See the this article for details:
-# Xu, H. 2005. “A catalogue of three-level regular fractional factorial designs,” Metrika (62:2), pp. 259–281.
+# Xu, H. 2005. “A catalogue of three-level regular fractional factorial
+# designs,” Metrika (62:2), pp. 259–281.
 #
-# The design matrix is 11-6.1 from the 234 replications set from the article
-# above.
+# The key problem with creating the design is that the simulation runs are 
+# nested: We have several sets of construct scores. We want to run at least
+# three different measurements for each score while keeping the tested model
+# constant to estimate test-retest stability of the estimated (Constraint 1).
+# Also we need to use each indicator data to estimate at least three different 
+# models so that we can analyze the stability of the measurement (Constraint 2).
 #
+# All replications must be independent, so these two constraints need to be
+# taken care of in the design matrix. 
+#
+# We should have one identity column that does not affect the construt scores to # be able to estimate three models for each set of constucts. This identity 
+# column should not affect the indicator columns either to keep both the
+# indicator data constant (no changes in constructs or measurements) over three # model estimations
+#
+# The first desing that fills this criteria is 11-5.10 from the 729 replications # set from the article above.
+#
+# See http://www.stat.ucla.edu/~hqxu/pub/ffd/ffd729.pdf
+#
+
+
+#
+# 729 runs would allow 14 factors with resolution V (14-8.1)
 
 generator <- matrix(c(	1,0,0,1,
 						0,1,1,2),ncol=4,byrow=TRUE)
 
-for(i in 3:5){
+for(i in 3:6){
 	generator<-cbind(rbind(generator,0),c(rep(0,i-1),1),rbind(generator,1),rbind(generator,2))
+	
 }
 
+
 #
-# permutations of a b c d e 
+# This command prints the desing matrix. The output is included below the 
+# command.
 #
-permutations<-matrix(c(c(0:242)%%3,c(0:242)%/%3%%3,c(0:242)%/%9%%3,c(0:242)%/%27%%3,c(0:242)%/%81),ncol=5)
+# print(generator[,c(1,2,5,14,41,122,63,149,166,188,222)])
+#
+#      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11]
+# [1,]    1    0    0    0    0    0    0    1    0     0     0
+# [2,]    0    1    0    0    0    0    1    2    1     1     0
+# [3,]    0    0    1    0    0    0    1    2    0     2     1
+# [4,]    0    0    0    1    0    0    1    1    0     1     1
+# [5,]    0    0    0    0    1    0    1    0    1     1     2
+# [6,]    0    0    0    0    0    1    0    1    1     1     1
+#
+# The factors are assigned as follows
+# Tested model: 1, 8
+# Measurement: 2,7,9,10,11
+# Population model and true scores: 3,4,5,6
+#
+
+#
+# permutations of a b c d e f
+#
+permutations<-matrix(c(c(0:728)%%3,c(0:728)%/%3%%3,c(0:728)%/%9%%3,c(0:728)%/%27%%3,c(0:728)%/%81%%3,c(0:728)%/%243),ncol=6)
+
+print(permutations)
 
 # Design matrix is the product of permutations and generator matrix, mod 3
 
 fullDesignMatrix<- ( permutations %*% generator ) %% 3
 
-# Get the indices from the 11-6.1 design reported in Xu, 2005
+# Get the indices from the 11-5.10 design reported in the online appendix of Xu,
+# 2005
 
-print(ncol(fullDesignMatrix))
-print(nrow(fullDesignMatrix))
+desingMatrix<-fullDesignMatrix[,c(1,2,5,14,41,122,63,149,166,188,222)]
 
-desingMatrix<-fullDesignMatrix[,c(1,2,5,14,41,63,27,72,79,93,114)]
-
-debugPrint(desingMatrix)
 
 stop("TODO: Implement the design matrix thing here")
 

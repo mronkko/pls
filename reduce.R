@@ -84,6 +84,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		
 		debugPrint("Start pls")
 
+		# TODO: Consider how well the bootstrapped construct scores correlate
+		
 		results[[testedModelIndex]]$plspm <- estimateWithPlspm(testedModel,data$indicators)
 		
 		# semPLS is very slow compared to plspm. The initial plan was to run the
