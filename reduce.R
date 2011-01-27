@@ -3,9 +3,6 @@
 
 source("parameters.R")
 
-# Some packages that we include want to write things to stdout. Redirect this to
-# /dev/null
-
 source("functions.R")
 
 options(warn=-1)
