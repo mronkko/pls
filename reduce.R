@@ -7,6 +7,8 @@ source("functions.R")
 
 options(warn=-1)
 
+designMatrix<-createdesignMatrix()
+
 con <- file("stdin", open = "r")
 
 #One line means population model- all tested models - one data specification combination. See prepare.R for details on the protocol.
@@ -21,53 +23,62 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	specification<-sapply(unlist(strsplit(line, split="\t")),as.numeric)
 
 	
-	# Setting colnames will help in debugging
-	names(specification)<-c(1:length(specification))
-	
-	# First 11 elements are scalars describing the parameters for the
-	# replication. 
+	# First element is the counter. 
 	
 	counter<-specification[1]
 
+	# Second two are the first and last row of the desing matrix 
+
+	startIndex<-specification[2]
+	endIndex<-specification[3]
+	
 	debugPrint(paste("Start of reduce task",counter))
 
-	populationModelNumber<-specification[2]
-	numberOfConstructsIndex<-specification[3]
-	expectedNumberOfOutgoingPathsIndex<-specification[3]
-	populationPathValuesIndex<-specification[5]
-	sampleSizeIndex<-specification[6]
-	indicatorCountIndex<-specification[7]
-	factorLoadingIndex<-specification[8]
-	factorLoadingIntervalIndex<-specification[9]
-	maxErrorCorrelationIndex<-specification[10]
-	methodVarianceIndex<-specification[11]
-
-	constructCount<-numberOfConstructs[numberOfConstructsIndex]
-	
 	# The rest are matrices. These are population covariance, population paths,
 	# and all tested models. Calculate the number and length of matrices and
 	# parse the population model
 	
-	testedModelCount<-length(expectedNumberOfOutgoingPaths)*length(populationPathValues)
+	# Currently the tested models is always three
+	testedModelCount<-3
 	matrixCount<-2+testedModelCount
-	
-	matrixLength<-constructCount^2
 
-	populationModel<-list(covariances=matrix(specification[12:(11+matrixLength)],ncol=constructCount),paths=matrix(specification[(12+matrixLength):(11+matrixLength*2)],ncol=constructCount))
-	
-	# Generate data for this set of replications
+	matrixLength<-(length(specification)-3)/matrixCount
+	constructCount<-sqrt(matrixLength)
 
-	data<-generateData(populationModel$covariances,sampleSizes[sampleSizeIndex],indicatorCounts[indicatorCountIndex],factorLoadings[factorLoadingIndex],factorLoadingIntervals[factorLoadingIntervalIndex],maxErrorCorrelations[maxErrorCorrelationIndex],methodVariances[methodVarianceIndex])
+	# Read the population model
+	populationModel<-list(covariances=matrix(specification[4:(3+matrixLength)],ncol=constructCount),paths=matrix(specification[(4+matrixLength):(3+matrixLength*2)],ncol=constructCount))
+	
+	# Calculate construct true scores. These same scores will be used in all of 
+	# the nine simulations.
+	
+	constructTrueScores <- populationModel$covariances,sampleSizes[sampleSizeIndex]
+
+	# We have three data and tree models and will test all combinations. The
+	# identity column for models is column 5 and the identity column for
+	# indicators is column 7 of the design matrix
 	
 	# Test the models saving results
 	
-	results<-list()
-	
-	# Temporarily for debugging just run two models
+	testedModels<-list('1'=NULL,'2'=NULL,'3'=NULL)
+	data<-list('1'=NULL,'2'=NULL,'3'=NULL)
 
-	for(testedModelIndex in 1:testedModelCount){
-		results[[testedModelIndex]]<-list()
-		testedModel<-matrix(specification[(12+matrixLength*(testedModelIndex+1)):(11+matrixLength*(testedModelIndex+2))],ncol=sqrt(matrixLength))
+	for(rowIndex in startIndex:endIndex){
+
+		thisRow <- designMatrix[rowIndex,]
+		
+		# Check if model exists for this test
+
+		if(is.null(testedModels[[thisRow[5]]])){
+			testedModels[[thisRow[5]]] <- matrix(specification[(4+matrixLength*(thisRow[5]+1)):(3+matrixLength*(thisRow[5]+2))],ncol=constructCount)
+		}
+		
+		# Check if data exists for this test 
+
+		if(is.null(data[[thisRow[7]]])){
+			data[[thisRow[7]]]<-generateData(constructTrueScores,indicatorCounts[indicatorCountIndex],factorLoadings[factorLoadingIndex],factorLoadingIntervals[factorLoadingIntervalIndex],maxErrorCorrelations[maxErrorCorrelationIndex],methodVariances[methodVarianceIndex])
+
+		}
+		
 		
 		# Model estimation requires that the names are correctly included
 		colnames(testedModel)<-paste("C",c(1:constructCount),sep="")
@@ -85,12 +96,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		
 		results[[testedModelIndex]]$plspm <- estimateWithPlspm(testedModel,data$indicators)
 		
-		# semPLS is very slow compared to plspm. The initial plan was to run the
-		# PLS analyses twice, but to save computing time, this is now dropped
-		# The line is here as a reminder, but the funtion that it calls has not
-		# been really tested
-		# results[testedModelIndex]$sempls <- estimateWithSemPLS(testedModel,data$indicators)
-
 	}
 	
 	# Calculate some statistics that need to be calculated over all analyses
