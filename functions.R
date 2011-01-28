@@ -24,14 +24,11 @@ debugPrint<-function(x){
 # "factorLoadings"
 #
 
-generateData <- function(populationCovariances,sampleSize,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance){
+generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance){
 
-	constructCount<-nrow(populationCovariances)
+	constructCount<-nrow(col)
+	sampleSize<-nrow(constructs)
 	
-	# Create the true values of the constructs.
-	
-	constructs <- mvrnorm(n=sampleSize,rep(0,constructCount),populationCovariances)
-
 	#Create a method factor
 	methodFactor<-rnorm(sampleSize,sd=sqrt(methodVariance))
 
@@ -102,27 +99,37 @@ generateData <- function(populationCovariances,sampleSize,indicatorCount,factorL
 }
 
 #
-# Estimates a path model with regression and summed scales
+# Estimates a path model with regression. Method is the name of the method used to generate the
+# construct scores. (sumscale, factor, component)
 #
 
-estimateWithRegression<-function(model,data){
+estimateWithRegression<-function(model,data,method){
 	
 	constructCount=ncol(model)
 	indicatorCount=ncol(data)/constructCount
 	sampleSize=nrow(data)
 	paths<-NULL
 	
-	#Form standardized summed scales
+	#Form the construct scores
 	
-	sumscales<-data.frame(row.names =c(1:sampleSize))
 	
-	for ( i in 1:constructCount ){
-		sumscales<-cbind(sumscales,rowSums(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))]))
-		
+	constructScores<-data.frame(row.names =c(1:sampleSize))
+	
+		for ( i in 1:constructCount ){
+			if(method=="sumscale"){
+				constructScores<-cbind(constructScores,rowSums(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))]))
+			}
+			else if (method == "component"){
+				constructScores<-cbind(constructScores,princomp(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))],scores = TRUE)$scores[,1])
+			}
+			else if (method == "factor"){
+				constructScores<-cbind(constructScores,factanal(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))],1,scores="regression")$scores[,1])
+			}
 	}
 	
-	sumscales<-as.data.frame(scale(sumscales))
-	colnames(sumscales)<-paste("C",c(1:constructCount),sep="")
+	# Standardize the scores and add names
+	constructScores<-as.data.frame(scale(constructScores))
+	colnames(constructScores)<-paste("C",c(1:constructCount),sep="")
 
 	
 	#Use the generated scores to evaluate regression paths that were included in the model
@@ -147,14 +154,14 @@ estimateWithRegression<-function(model,data){
 			
 			#Store summary of the results as object. We will next extract the coefficients and their standard errors from this object
 
-			tempresults<-lm(formulaobj,data=sumscales)
+			tempresults<-lm(formulaobj,data=constructScores)
 
 			stdcoefficients<-summary(tempresults)$coefficients
 
 			for(k in 2:nrow(stdcoefficients)){
 				
 				#"From","To","Estimates value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA,"regress")
+				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA,method)
 
 				paths<-rbind(paths,newrow)
 			}
@@ -163,7 +170,7 @@ estimateWithRegression<-function(model,data){
 	
 	#Return the construct scores and path estimates
 	
-	return(list(constructs=sumscales,paths=paths))
+	return(list(constructs=constructScores,paths=paths))
 }
 
 estimateWithPlspm<-function(model,data){

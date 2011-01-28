@@ -51,7 +51,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# Calculate construct true scores. These same scores will be used in all of 
 	# the nine simulations.
 	
-	constructTrueScores <- populationModel$covariances,sampleSizes[sampleSizeIndex]
+	constructTrueScores <- mvrnorm(n=sampleSizes[designMatrix[[startIndex,4]]],rep(0,constructCount),populationModel$covariances)
+
 
 	# We have three data and tree models and will test all combinations. The
 	# identity column for models is column 5 and the identity column for
@@ -66,40 +67,42 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		thisRow <- designMatrix[rowIndex,]
 		
-		# Check if model exists for this test
+		# Check if model exists for this test. If not, read from specification.
 
 		if(is.null(testedModels[[thisRow[5]]])){
 			testedModels[[thisRow[5]]] <- matrix(specification[(4+matrixLength*(thisRow[5]+1)):(3+matrixLength*(thisRow[5]+2))],ncol=constructCount)
+			
+			# Model estimation requires that the names are correctly included
+			colnames(testedModels[[thisRow[5]]])<-paste("C",c(1:constructCount),sep="")
+			rownames(testedModels[[thisRow[5]]])<-paste("C",c(1:constructCount),sep="")
+
 		}
 		
-		# Check if data exists for this test 
+		# Check if data exists for this test. If not, generate. 
 
 		if(is.null(data[[thisRow[7]]])){
-			data[[thisRow[7]]]<-generateData(constructTrueScores,indicatorCounts[indicatorCountIndex],factorLoadings[factorLoadingIndex],factorLoadingIntervals[factorLoadingIntervalIndex],maxErrorCorrelations[maxErrorCorrelationIndex],methodVariances[methodVarianceIndex])
+			data[[thisRow[7]]]<-generateData(constructTrueScores,indicatorCounts[thisRow[7]],factorLoadings[thisRow[8]],factorLoadingIntervals[thisRow[9]],maxErrorCorrelations[thisRow[10]],methodVariances[thisRow[11]])
 
 		}
 		
-		
-		# Model estimation requires that the names are correctly included
-		colnames(testedModel)<-paste("C",c(1:constructCount),sep="")
-		rownames(testedModel)<-paste("C",c(1:constructCount),sep="")
-		
-		# Write code for testing the model
 
 		debugPrint("Start regression")
 		
-		results[[testedModelIndex]]$regression <- estimateWithRegression(testedModel,data$indicators)
+		results[[rowIndex]]$sumscale <- estimateWithRegression(testedModel,data[[thisRow[7]]]$indicators,method="sumscale")
+
+		results[[rowIndex]]$component <- estimateWithRegression(testedModel,data[[thisRow[7]]]$indicators,method="component")
+
+		results[[rowIndex]]$factor <- estimateWithRegression(testedModel,data[[thisRow[7]]]$indicators,method="factor")
+
 		
 		debugPrint("Start pls")
 
-		# TODO: Consider how well the bootstrapped construct scores correlate
-		
-		results[[testedModelIndex]]$plspm <- estimateWithPlspm(testedModel,data$indicators)
+		results[[rowIndex]]$pls <- estimateWithPlspm(testedModel,data$indicators)
 		
 	}
 	
 	# Calculate some statistics that need to be calculated over all analyses
-	# done for this particular data set
+	# done for this particular set of replications
 	
 	#
 	# Calculate correlations for each construct over all estimated models.
@@ -138,20 +141,71 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	debugPrint("Start reporting")
 
 	# Print the results. Start with the full specification string (input line)
-	
+
+	cat("Design\n")
 	cat(line,"\n",sep="")
 
-	#Print true factor loadings
+	cat("Data\n")
+	#Print construct sample correlations
+	write.table(cor(constructTrueScores),sep="\t",row.names=FALSE,col.names=FALSE)
 	
-	#Loop over replications and model types. Print the resutls as lines.
+	#Loop over the three indicator data
 	
-	for(modelTypeIndex in 1:length(results[[1]])){
+	for(i in 1:3){
+
+		#Print true factor loadings
+		cat(data[[i]]$factorLoadings,sep="\t")
+		cat("\n")
+
+		#Print correlation matrix of items
+		write.table(cor(data[[i]]$indicators),sep="\t",row.names=FALSE,col.names=FALSE)
+
+		#Print item-construct correlations
+		write.table(cor(data[[i]]$indicators,constructTrueScores),sep="\t",row.names=FALSE,col.names=FALSE)
 		
-		cat("\n",names(results[[1]])[modelTypeIndex],"\n")
+	}
+
+	#Loop ove model types and print results
+
+	for(modelTypeIndex in 1:length(results[[startIndex]])){
+		
+		cat("\n",names(results[[startIndex]])[modelTypeIndex],"\n")
 	
-		for(testedModelIndex in 1:testedModelCount){
+		# Print calculate standard deviations of construct within cases over
+		# each data. Calculate mean by construct and print to result file
+
+		for(dataIndex in 1:3){
+			for(constructIndex in 1:constructCount){
+				tempMatrix<-cbind(results[[startIndex+dataIndex-1]])[modelTypeIndex]$constructs[,constructIndex],
+				results[[startIndex+dataIndex+3]])[modelTypeIndex]$constructs[,constructIndex],
+				results[[startIndex+dataIndex+6]])[modelTypeIndex]$constructs[,constructIndex])
+
+				if(constructIndex!=1) cat("\t")
+				cat(mean(sd(t(tempMatrix))))
+			}
+			cat("\n")
+		}
+		
+		# Print calculate standard deviations of construct within cases over
+		# each model
+		
+		for(modelIndex in 1:3){
+			for(constructIndex in 1:constructCount){
+				tempMatrix<-cbind(results[[startIndex+modelIndex*3-3]])[modelTypeIndex]$constructs[,constructIndex],
+				results[[startIndex+modelIndex*3-2]])[modelTypeIndex]$constructs[,constructIndex],
+				results[[startIndex+modelIndex*3-1]])[modelTypeIndex]$constructs[,constructIndex])
+
+				if(constructIndex!=1) cat("\t")
+				cat(mean(sd(t(tempMatrix))))
+			}
+			cat("\n")
+		}
 	
-			cat(names(results)[testedModelIndex],"\n")
+		# Loop over the nine tested models and print results
+		for(testedModelIndex in startIndex:endIndex){
+
+			cat(testedModelIndex)
+			cat("\n")
 			
 			resultObj<-results[[testedModelIndex]][[modelTypeIndex]]
 
@@ -162,25 +216,22 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			}
 			else{
 				#Print path coefficients
-				debugPrint("Paths")
+				cat("Paths")
 				write.table(resultObj$paths,sep="\t",row.names=FALSE,col.names=FALSE)
 	
 	
 				#Print a correlation matrix of construct scores and true scores
-				debugPrint("Construct correlations")
+				cat("Construct correlations")
 				write.table(cor(resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
 	
 				#Print a correlation matrix of construct scores and true scores
-				debugPrint("True score correlations")
+				cat("True score correlations")
 				write.table(cor(data$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
 	
 				#Print item-construct correlation matrix
-				debugPrint("Item-construct cross-loading matrix")
+				cat("Item-construct cross-loading matrix")
 				write.table(cor(data$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
 	
-				#Print a vector of correlations with mean of construct estimates
-				debugPrint("Construct correlations with mean construct estimates")
-				write.table(t(diag(cor(constructMeans[[modelTypeIndex]],resultObj$constructs))),sep="\t",row.names=FALSE,col.names=FALSE)
 			}
 		}
 	}
