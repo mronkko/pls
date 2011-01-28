@@ -26,7 +26,7 @@ debugPrint<-function(x){
 
 generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance){
 
-	constructCount<-nrow(col)
+	constructCount<-ncol(constructs)
 	sampleSize<-nrow(constructs)
 	
 	#Create a method factor
@@ -40,7 +40,7 @@ generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingIn
 	indicatorBase<-NULL
 	for(construct in 1:constructCount){
 		for(indicator in 1:indicatorCount){
-			indicatorBase<-cbind(indicatorBase,constructs[,construct]*factorLoadingValues[construct*(indicatorCount-1)+indicator])
+			indicatorBase<-cbind(indicatorBase,constructs[,construct]*factorLoadingValues[(construct-1)*indicatorCount+indicator])
 		}
 	}
 	
@@ -82,6 +82,7 @@ generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingIn
 	
 	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),errorCovarianceMatrix)
 
+	
 	# Indicators are asum of the components
 	indicators=data.frame(indicatorBase+methodVarianceComponent+errorTerms)
 
@@ -194,7 +195,7 @@ estimateWithPlspm<-function(model,data){
 
 	tryCatch(
 		plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=TRUE)
-		,error = function(e){DebugPrint(e)}
+		,error = function(e){debugPrint(e)}
 	)
 	
 	if(is.null(plsResults)){
@@ -288,7 +289,6 @@ createdesignMatrix <- function(){
 	#
 	permutations<-matrix(c(c(0:728)%%3,c(0:728)%/%3%%3,c(0:728)%/%9%%3,c(0:728)%/%27%%3,c(0:728)%/%81%%3,c(0:728)%/%243),ncol=6)
 	
-	print(permutations)
 	
 	# Design matrix is the product of permutations and generator matrix, mod 3
 	

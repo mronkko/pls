@@ -44,12 +44,13 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 	matrixLength<-(length(specification)-3)/matrixCount
 	constructCount<-sqrt(matrixLength)
-
 	# Read the population model
 	populationModel<-list(covariances=matrix(specification[4:(3+matrixLength)],ncol=constructCount),paths=matrix(specification[(4+matrixLength):(3+matrixLength*2)],ncol=constructCount))
 	
 	# Calculate construct true scores. These same scores will be used in all of 
 	# the nine simulations.
+	
+	debugPrint("Genarate construct true scores")
 	
 	constructTrueScores <- mvrnorm(n=sampleSizes[designMatrix[[startIndex,4]]],rep(0,constructCount),populationModel$covariances)
 
@@ -62,16 +63,19 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 	testedModels<-list('1'=NULL,'2'=NULL,'3'=NULL)
 	data<-list('1'=NULL,'2'=NULL,'3'=NULL)
-
+	results<-list()
+	
 	for(rowIndex in startIndex:endIndex){
 
 		thisRow <- designMatrix[rowIndex,]
+
+#		debugPrint(paste("Row ",rowIndex,"of desing matrix"))
+#		debugPrint(thisRow)
 		
 		# Check if model exists for this test. If not, read from specification.
 
 		if(is.null(testedModels[[thisRow[5]]])){
 			testedModels[[thisRow[5]]] <- matrix(specification[(4+matrixLength*(thisRow[5]+1)):(3+matrixLength*(thisRow[5]+2))],ncol=constructCount)
-			
 			# Model estimation requires that the names are correctly included
 			colnames(testedModels[[thisRow[5]]])<-paste("C",c(1:constructCount),sep="")
 			rownames(testedModels[[thisRow[5]]])<-paste("C",c(1:constructCount),sep="")
@@ -85,19 +89,21 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		}
 		
-
+#		debugPrint(testedModels[[thisRow[5]]])
+#		debugPrint(summary(data[[thisRow[7]]]$indicators))
+		
 		debugPrint("Start regression")
 		
-		results[[rowIndex]]$sumscale <- estimateWithRegression(testedModel,data[[thisRow[7]]]$indicators,method="sumscale")
+		results[[toString(rowIndex)]]$sumscale <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="sumscale")
 
-		results[[rowIndex]]$component <- estimateWithRegression(testedModel,data[[thisRow[7]]]$indicators,method="component")
+		results[[toString(rowIndex)]]$component <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="component")
 
-		results[[rowIndex]]$factor <- estimateWithRegression(testedModel,data[[thisRow[7]]]$indicators,method="factor")
+		results[[toString(rowIndex)]]$factor <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="factor")
 
 		
 		debugPrint("Start pls")
 
-		results[[rowIndex]]$pls <- estimateWithPlspm(testedModel,data$indicators)
+		results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators)
 		
 	}
 	
@@ -111,33 +117,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# with the mean values
 	#
 
-	debugPrint("Calculate construct means")
 
-	# There is probably a more elegant way to do this than using two nested 
-	# loops.
-	
-	constructMeans<-list()
-	for(modelTypeIndex in 1:length(results[[1]])){
-
-		constructSums<-NULL
-		
-		for(testedModelIndex in 1:testedModelCount){
-			
-			#The results can be null if pls did not converge
-			
-			if(! is.null(results[[testedModelIndex]][[modelTypeIndex]])){
-				if(is.null(constructSums)){
-					constructSums<-results[[testedModelIndex]][[modelTypeIndex]]$constructs
-				}
-				else{
-					constructSums<-constructSums+results[[testedModelIndex]][[modelTypeIndex]]$constructs
-				}
-			}
-		}
-
-		constructMeans[[modelTypeIndex]]=constructSums/testedModelCount
-	}
-	
 	debugPrint("Start reporting")
 
 	# Print the results. Start with the full specification string (input line)
@@ -167,19 +147,20 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 	#Loop ove model types and print results
 
-	for(modelTypeIndex in 1:length(results[[startIndex]])){
+	for(modelTypeIndex in 1:length(results[[toString(startIndex)]])){
 		
-		cat("\n",names(results[[startIndex]])[modelTypeIndex],"\n")
+		cat("\n",names(results[[toString(startIndex)]])[modelTypeIndex],"\n")
 	
 		# Print calculate standard deviations of construct within cases over
-		# each data. Calculate mean by construct and print to result file
+		# each data. Calculate mean of sd by construct and print to results
 
 		for(dataIndex in 1:3){
 			for(constructIndex in 1:constructCount){
-				tempMatrix<-cbind(results[[startIndex+dataIndex-1]])[modelTypeIndex]$constructs[,constructIndex],
-				results[[startIndex+dataIndex+3]])[modelTypeIndex]$constructs[,constructIndex],
-				results[[startIndex+dataIndex+6]])[modelTypeIndex]$constructs[,constructIndex])
-
+				
+				tempMatrix<-cbind(results[[toString(startIndex+dataIndex-1)]][modelTypeIndex]$constructs[,constructIndex],
+				results[[toString(startIndex+dataIndex+3)]][[modelTypeIndex]]$constructs[,constructIndex],
+				results[[toString(startIndex+dataIndex+6)]][[modelTypeIndex]]$constructs[,constructIndex])
+				
 				if(constructIndex!=1) cat("\t")
 				cat(mean(sd(t(tempMatrix))))
 			}
@@ -187,13 +168,14 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		}
 		
 		# Print calculate standard deviations of construct within cases over
-		# each model
+		# each model. Calculate mean of sd  by construct and print to results
+
 		
 		for(modelIndex in 1:3){
 			for(constructIndex in 1:constructCount){
-				tempMatrix<-cbind(results[[startIndex+modelIndex*3-3]])[modelTypeIndex]$constructs[,constructIndex],
-				results[[startIndex+modelIndex*3-2]])[modelTypeIndex]$constructs[,constructIndex],
-				results[[startIndex+modelIndex*3-1]])[modelTypeIndex]$constructs[,constructIndex])
+				tempMatrix<-cbind(results[[toString(startIndex+modelIndex*3-3)]][modelTypeIndex]$constructs[,constructIndex],
+				results[[toString(startIndex+modelIndex*3-2)]][[modelTypeIndex]]$constructs[,constructIndex],
+				results[[toString(startIndex+modelIndex*3-1)]][[modelTypeIndex]]$constructs[,constructIndex])
 
 				if(constructIndex!=1) cat("\t")
 				cat(mean(sd(t(tempMatrix))))
@@ -202,12 +184,14 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		}
 	
 		# Loop over the nine tested models and print results
-		for(testedModelIndex in startIndex:endIndex){
+		for(rowIndex in startIndex:endIndex){
 
-			cat(testedModelIndex)
+			thisRow <- designMatrix[rowIndex,]
+
+			cat(rowIndex)
 			cat("\n")
 			
-			resultObj<-results[[testedModelIndex]][[modelTypeIndex]]
+			resultObj<-results[[toString(rowIndex)]][[modelTypeIndex]]
 
 			#Only print things if the model converged
 			
@@ -216,21 +200,22 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			}
 			else{
 				#Print path coefficients
-				cat("Paths")
+				cat("Paths\n")
 				write.table(resultObj$paths,sep="\t",row.names=FALSE,col.names=FALSE)
 	
 	
 				#Print a correlation matrix of construct scores and true scores
-				cat("Construct correlations")
+				cat("Construct correlations\n")
 				write.table(cor(resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
 	
 				#Print a correlation matrix of construct scores and true scores
-				cat("True score correlations")
-				write.table(cor(data$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+				cat("True score correlations\n")
+				
+				write.table(cor(data[[thisRow[7]]]$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
 	
 				#Print item-construct correlation matrix
-				cat("Item-construct cross-loading matrix")
-				write.table(cor(data$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+				cat("Item-construct cross-loading matrix\n")
+				write.table(cor(data[[thisRow[7]]]$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
 	
 			}
 		}
@@ -238,5 +223,5 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	debugPrint(paste("End of reduce task",counter,"  ",timeStarted," - ",Sys.time()))
 
 }
-
+wc
 close(con)
