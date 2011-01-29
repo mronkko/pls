@@ -14,7 +14,7 @@ library(MASS)
 # A wrapper for print to allow easily commenting out all unneccessary print commmands
 #
 debugPrint<-function(x){
-	print(x)
+	#print(x)
 }
 
 
@@ -162,13 +162,16 @@ estimateWithRegression<-function(model,data,method){
 			for(k in 2:nrow(stdcoefficients)){
 				
 				#"From","To","Estimates value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA,method)
+				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA)
 
 				paths<-rbind(paths,newrow)
 			}
 		}
 	}
 	
+	colnames(paths)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+	rownames(paths)<-c(1:nrow(paths))
+
 	#Return the construct scores and path estimates
 	
 	return(list(constructs=constructScores,paths=paths))
@@ -193,6 +196,8 @@ estimateWithPlspm<-function(model,data){
 
 	# It is possible that the model does not converge, so we need to do some error handling. 
 
+	plsResults<-NULL
+	
 	tryCatch(
 		plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=TRUE)
 		,error = function(e){debugPrint(e)}
@@ -203,7 +208,10 @@ estimateWithPlspm<-function(model,data){
 	}
 	else{
 		# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-		paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths,"pls")
+		paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths)
+
+		colnames(paths)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+		rownames(paths)<-c(1:nrow(paths))
 
 		return(list(constructs=plsResults$latents,paths=paths))
 	}

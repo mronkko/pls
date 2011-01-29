@@ -69,9 +69,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		thisRow <- designMatrix[rowIndex,]
 
-#		debugPrint(paste("Row ",rowIndex,"of desing matrix"))
-#		debugPrint(thisRow)
-		
 		# Check if model exists for this test. If not, read from specification.
 
 		if(is.null(testedModels[[thisRow[5]]])){
@@ -89,8 +86,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		}
 		
-#		debugPrint(testedModels[[thisRow[5]]])
-#		debugPrint(summary(data[[thisRow[7]]]$indicators))
 		
 		debugPrint("Start regression")
 		
@@ -102,7 +97,10 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		
 		debugPrint("Start pls")
-
+		
+		# It is possible that the PLS algorithm did not converge. In this case 
+		# the result object will be null. 
+		
 		results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators)
 		
 	}
@@ -125,62 +123,69 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	cat("Design\n")
 	cat(line,"\n",sep="")
 
-	cat("Data\n")
-	#Print construct sample correlations
-	write.table(cor(constructTrueScores),sep="\t",row.names=FALSE,col.names=FALSE)
 	
 	#Loop over the three indicator data
 	
 	for(i in 1:3){
-
+		cat(paste("Data",i,"\n"))
 		#Print true factor loadings
-		cat(data[[i]]$factorLoadings,sep="\t")
-		cat("\n")
-
-		#Print correlation matrix of items
-		write.table(cor(data[[i]]$indicators),sep="\t",row.names=FALSE,col.names=FALSE)
-
-		#Print item-construct correlations
-		write.table(cor(data[[i]]$indicators,constructTrueScores),sep="\t",row.names=FALSE,col.names=FALSE)
+		cat("Population factor loadings\n")
+		tempMatrix<-matrix(data[[i]]$factorLoadings,nrow=1)
+		colnames(tempMatrix)<-names(data[[i]]$indicators)
+		write.table(tempMatrix,sep="\t")
 		
+		cat("Correlations\n")
+		#Print construct sample correlations
+		write.table(cor(cbind(data[[i]]$construct,data[[i]]$indicators)),sep="\t")
+
 	}
 
 	#Loop ove model types and print results
 
 	for(modelTypeIndex in 1:length(results[[toString(startIndex)]])){
 		
-		cat("\n",names(results[[toString(startIndex)]])[modelTypeIndex],"\n")
+		cat("\n",names(results[[toString(startIndex)]])[modelTypeIndex],"\n\n")
 	
 		# Print calculate standard deviations of construct within cases over
-		# each data. Calculate mean of sd by construct and print to results
+		# each data and each model. Calculate mean of sd by construct and print 
+		# to results
 
-		for(dataIndex in 1:3){
-			for(constructIndex in 1:constructCount){
+		cat("Construct score sds over data/model\n")
+		for(multiplier in c(3,1)){
+			labels <- c("Model","","Data")
+			label<-labels[multiplier]
+			for(i in 1:3){
+				cat(paste(label,i,"\n"))
+				# Index of the first replication that we are interested 
+				# in for this calculation.
 				
-				tempMatrix<-cbind(results[[toString(startIndex+dataIndex-1)]][modelTypeIndex]$constructs[,constructIndex],
-				results[[toString(startIndex+dataIndex+3)]][[modelTypeIndex]]$constructs[,constructIndex],
-				results[[toString(startIndex+dataIndex+6)]][[modelTypeIndex]]$constructs[,constructIndex])
+				baseIndex<-startIndex+(i-1)*(4-multiplier)
+				index1<-toString(baseIndex)
+				index2<-toString(baseIndex+multiplier)
+				index3<-toString(baseIndex+2*multiplier)
 				
-				if(constructIndex!=1) cat("\t")
-				cat(mean(sd(t(tempMatrix))))
-			}
-			cat("\n")
-		}
-		
-		# Print calculate standard deviations of construct within cases over
-		# each model. Calculate mean of sd  by construct and print to results
+				# PLS models can be con-convergent. If this happens, we do not 
+				# want to calculate the sds
 
-		
-		for(modelIndex in 1:3){
-			for(constructIndex in 1:constructCount){
-				tempMatrix<-cbind(results[[toString(startIndex+modelIndex*3-3)]][modelTypeIndex]$constructs[,constructIndex],
-				results[[toString(startIndex+modelIndex*3-2)]][[modelTypeIndex]]$constructs[,constructIndex],
-				results[[toString(startIndex+modelIndex*3-1)]][[modelTypeIndex]]$constructs[,constructIndex])
-
-				if(constructIndex!=1) cat("\t")
-				cat(mean(sd(t(tempMatrix))))
+				if(is.null(results[[index1]][[modelTypeIndex]])|is.null(results[[index2]][[modelTypeIndex]])|is.null(results[[index3]][[modelTypeIndex]])){
+					cat("No convergence\n")
+				}
+				
+				else{
+					sds<-NULL
+					for(constructIndex in 1:constructCount){
+						
+						tempMatrix<-cbind(results[[index1]][[modelTypeIndex]]$constructs[,constructIndex],
+						results[[index2]][[modelTypeIndex]]$constructs[,constructIndex],
+						results[[index3]][[modelTypeIndex]]$constructs[,constructIndex])
+						
+						sds<-c(sds,mean(sd(t(tempMatrix))))
+					}
+					tempMatrix<-matrix(sds,nrow=1)
+					colnames(tempMatrix)<-names(data[[i]]$constructs)
+					write.table(tempMatrix,sep="\t")
+				}
 			}
-			cat("\n")
 		}
 	
 		# Loop over the nine tested models and print results
@@ -188,7 +193,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 			thisRow <- designMatrix[rowIndex,]
 
-			cat(rowIndex)
+			cat("Row index",rowIndex)
 			cat("\n")
 			
 			resultObj<-results[[toString(rowIndex)]][[modelTypeIndex]]
@@ -201,21 +206,12 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			else{
 				#Print path coefficients
 				cat("Paths\n")
-				write.table(resultObj$paths,sep="\t",row.names=FALSE,col.names=FALSE)
+				write.table(resultObj$paths,sep="\t")
 	
 	
-				#Print a correlation matrix of construct scores and true scores
-				cat("Construct correlations\n")
-				write.table(cor(resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
-	
-				#Print a correlation matrix of construct scores and true scores
-				cat("True score correlations\n")
-				
-				write.table(cor(data[[thisRow[7]]]$constructs,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
-	
-				#Print item-construct correlation matrix
-				cat("Item-construct cross-loading matrix\n")
-				write.table(cor(data[[thisRow[7]]]$indicators,resultObj$constructs),sep="\t",row.names=FALSE,col.names=FALSE)
+				#Print a correlation matrix of construct scores, true scores, andd indicators
+				cat("Correlations\n")
+				write.table(cor(cbind(data[[thisRow[7]]]$constructs,resultObj$constructs,data[[thisRow[7]]]$indicators)),sep="\t")
 	
 			}
 		}
