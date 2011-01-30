@@ -1,6 +1,8 @@
 #! /usr/bin/env Rscript
 # The reducer receives a population model and tested model. It runs PLS and summed scales on all specified experimental conditions for these models and outputs the results as CSV. 
 
+library(R.oo)
+
 source("parameters.R")
 
 source("functions.R")
@@ -13,7 +15,7 @@ con <- file("stdin", open = "r")
 
 #One line means population model- all tested models - one data specification combination. See prepare.R for details on the protocol.
 
-while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 
 	# Record the time that this iteration takes
 	timeStarted<-Sys.time()
@@ -120,37 +122,33 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 	# Print the results. Start with the full specification string (input line)
 
-	cat("Design\n")
+	cat("\nDesign\n")
 	cat(line,"\n",sep="")
 
 	
 	#Loop over the three indicator data
 	
 	for(i in 1:3){
-		cat(paste("Data",i,"\n"))
+		cat("\nData ",i,"\n",sep="")
 		#Print true factor loadings
-		cat("Population factor loadings\n")
+		cat("\nPopulation factor loadings\n")
 		tempMatrix<-matrix(data[[i]]$factorLoadings,nrow=1)
 		colnames(tempMatrix)<-names(data[[i]]$indicators)
 		write.table(tempMatrix,sep="\t")
 		
-		cat("Correlations\n")
-		#Print construct sample correlations
-		write.table(cor(cbind(data[[i]]$construct,data[[i]]$indicators)),sep="\t")
-
 	}
 
 	#Loop ove model types and print results
 
 	for(modelTypeIndex in 1:length(results[[toString(startIndex)]])){
 		
-		cat("\n",names(results[[toString(startIndex)]])[modelTypeIndex],"\n\n")
+		cat("\n\n",names(results[[toString(startIndex)]])[modelTypeIndex],"\n\n")
 	
 		# Print calculate standard deviations of construct within cases over
 		# each data and each model. Calculate mean of sd by construct and print 
 		# to results
 
-		cat("Construct score sds over data/model\n")
+		cat("\nConstruct score sds over data/model\n")
 		for(multiplier in c(3,1)){
 			labels <- c("Model","","Data")
 			label<-labels[multiplier]
@@ -168,7 +166,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				# want to calculate the sds
 
 				if(is.null(results[[index1]][[modelTypeIndex]])|is.null(results[[index2]][[modelTypeIndex]])|is.null(results[[index3]][[modelTypeIndex]])){
-					cat("No convergence\n")
+					cat("\nNo convergence\n")
 				}
 				
 				else{
@@ -193,24 +191,24 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 			thisRow <- designMatrix[rowIndex,]
 
-			cat("Row index",rowIndex)
-			cat("\n")
+			cat("\nRow index",rowIndex)
+			cat("\n\n")
 			
 			resultObj<-results[[toString(rowIndex)]][[modelTypeIndex]]
 
 			#Only print things if the model converged
 			
 			if(is.null(resultObj)){
-				cat("No convergence\n")
+				cat("\nNo convergence\n")
 			}
 			else{
 				#Print path coefficients
-				cat("Paths\n")
+				cat("\nPaths\n")
 				write.table(resultObj$paths,sep="\t")
 	
 	
 				#Print a correlation matrix of construct scores, true scores, andd indicators
-				cat("Correlations\n")
+				cat("\nCorrelations\n")
 				write.table(cor(cbind(data[[thisRow[7]]]$constructs,resultObj$constructs,data[[thisRow[7]]]$indicators)),sep="\t")
 	
 			}
