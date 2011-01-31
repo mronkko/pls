@@ -26,3 +26,5 @@ factorLoadingIntervals<-c(0,.1,.2)
 maxErrorCorrelations<-c(0,.2,.4)
 methodVariances<-c(0,.1,.2)
 
+# Do not change this. 
+analysisTypes<-c("sumscale","component","factor","pls")

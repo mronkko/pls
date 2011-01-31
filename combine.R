@@ -8,6 +8,7 @@ source("parameters.R")
 source("functions.R")
 source("functionsCombine.R")
 
+# Needed for trim-function
 library(R.oo) 
 
 # Initialize matrices
@@ -30,7 +31,6 @@ constructEstimateSdsByData<-array(list(rep(NULL,729*replications*4)),dim=c(repli
 
 con <- file("stdin", open = "r")
 
-analysisTypes<-c("sumscale","component","factor","pls")
 
 #Reset the analysis object
 analysis<-NULL
@@ -144,6 +144,7 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 				# data. Check that it matches and record the standard deviations
 				
 				if(designMatrix[designNumber,7]==dataNumber){
+					print(sds)
 					constructEstimateSdsByData[[replication,designNumber,analysis]]<-sds
 				}
 			}
