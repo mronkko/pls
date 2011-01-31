@@ -37,6 +37,8 @@ analysis<-NULL
 
 while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 	
+	debugPrint(line)
+	
 	#If the line is empty, do nothing
 	if (line==""){
 		next()
@@ -144,7 +146,6 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 				# data. Check that it matches and record the standard deviations
 				
 				if(designMatrix[designNumber,7]==dataNumber){
-					print(sds)
 					constructEstimateSdsByData[[replication,designNumber,analysis]]<-sds
 				}
 			}

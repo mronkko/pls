@@ -12,7 +12,7 @@ load("data.RData")
 source("parameters.R")
 
 
-constructStatistics<-data.frame(construct<-character(0),replication<-numeric(0),designNumber<-numeric(0),analysis<-character(0),CR<-numeric(0),AVE<-numeric(0),minFactorLoading<-numeric(0),meanFactorLoading<-numeric(0),maxCrossLoading<-numeric(0),maxCorrelationWithOtherConstruct<-numeric(0),trueScoreCorrelation<-numeric(0),deltaR2<-numeric(0),sdByModels<-numeric(0),sdByData<-numeric(0))
+constructStatistics=data.frame(construct=character(0),replication=numeric(0),designNumber=numeric(0),analysis=character(0),CR=numeric(0),AVE=numeric(0),minFactorLoading=numeric(0),meanFactorLoading=numeric(0),maxCrossLoading=numeric(0),maxCorrelationWithOtherConstruct=numeric(0),trueScoreCorrelation=numeric(0),deltaR2=numeric(0),sdByModels=numeric(0),sdByData=numeric(0))
 
 # Loop over all the results and calculate all needed statistics.
 
@@ -92,22 +92,27 @@ for(replication in 1:replications){
 					deltaR2=mat.regress(thisCorrelations,1:constructs,thisConstructCol)$R2-trueScoreCorrelation^2
 					
 					# Within data sd
-					sdByData<-constructEstimateSdsByData[replication,designNumber,analysis][[construct]]
+					
+					sdByData<-constructEstimateSdsByData[[replication,designNumber,analysis]][[construct]]
 					
 					# Within model sd
-					sdByModels<-constructEstimateSdsByModel[replication,designNumber,analysis][[construct]]
+					sdByModels<-constructEstimateSdsByModel[[replication,designNumber,analysis]][[construct]]
 
 
 					# Append the entire set to the data
 					
-					constructStatistics<-rbind(constructStatistics,data.frame(paste("C",construct,sep=""),replication,designNumber,analysisTypes[analysis],CR,AVE,minFactorLoading,meanFactorLoading,maxCrossLoading,maxCorrelationWithOtherConstruct,trueScoreCorrelation,deltaR2,sdByModels,sdByData))
+					newRow<-data.frame(construct=paste("C",construct,sep=""),replication=replication,designNumber=designNumber,analysis=analysisTypes[analysis],CR=CR,AVE=AVE,minFactorLoading=minFactorLoading,meanFactorLoading=meanFactorLoading,maxCrossLoading=maxCrossLoading,maxCorrelationWithOtherConstruct=maxCorrelationWithOtherConstruct,trueScoreCorrelation=trueScoreCorrelation,deltaR2=deltaR2,sdByModels=sdByModels,sdByData=sdByData)
+					constructStatistics<-rbind(constructStatistics,newRow)
 				}
 			}
 		}
 	}
 }
 
+print(constructStatistics)
 
+save(constructStatistics
+,file="constructStatistics.RData")
 
 
 

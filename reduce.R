@@ -186,6 +186,7 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 					tempMatrix<-matrix(sds,nrow=1)
 					colnames(tempMatrix)<-names(data[[i]]$constructs)
 					write.table(tempMatrix,sep="\t")
+					cat("\n")
 				}
 			}
 		}
