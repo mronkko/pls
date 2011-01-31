@@ -6,11 +6,14 @@
 
 source("parameters.R")
 source("functions.R")
+source("functionsCombine.R")
+
+library(R.oo) 
 
 # Initialize matrices
 designMatrix<-createdesignMatrix()
 
-# Paths are stored as a matrix or data.frame (which ever read.table defaults to) 
+# Paths are stored as a data.frame (which ever read.table defaults to) 
 
 paths<-NULL
 
@@ -19,30 +22,42 @@ paths<-NULL
 
 correlations<-array(list(rep(NULL,729*replications*4)),dim=c(replications,729,4),dimnames=c("replication","designNumber","analysis"))
 
-populationFactorLoadings<-array(list(rep(NULL,729*replications)),dim=c(replications,729),dimnames=c("replication","designNumber",))
+populationFactorLoadings<-array(list(rep(NULL,729*replications)),dim=c(replications,729),dimnames=c("replication","designNumber"))
 
 constructEstimateSdsByModel<-array(list(rep(NULL,729*replications*4)),dim=c(replications,729,4),dimnames=c("replication","designNumber","analysis"))
 
 constructEstimateSdsByData<-array(list(rep(NULL,729*replications*4)),dim=c(replications,729,4),dimnames=c("replication","designNumber","analysis"))
 
-
 con <- file("stdin", open = "r")
 
-while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+analysisTypes<-c("sumscale","component","factor","pls")
+
+#Reset the analysis object
+analysis<-NULL
+
+while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 	
+	#If the line is empty, do nothing
+	if (line==""){
+		next()
+	}
 	# Detect running a new design
-	if(line=="Design"){
+	else if(line=="Design"){
 	
 		line <- readLines(con, n = 1, warn = FALSE)
 
 		specification<-sapply(unlist(strsplit(line, split="\t")),as.numeric)
+		replication<-specification[1]
+		
+		print(paste("Replication ",specification[1],", designs  ",specification[2],"-",specification[3],sep=""))
 		
 		# Loop over the design numbers and store the results to the results 
 		# objects
 			
-		constructCount<-sqrt((length(specification)-3)/2)
-		populationPaths<-matrix(specification[c(4+constructCount^2:length(specification))],ncol=constructCount)
-			
+		constructCount<-sqrt((length(specification)-3)/5)
+		
+		populationPaths<-matrix(specification[c((4+constructCount^2):(3+2*constructCount^2))],ncol=constructCount)
+
 		populationPathData<-NULL
 			
 		names<-paste("C",c(1:constructCount),sep="")
@@ -51,31 +66,41 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			for(j in 1:constructCount){
 				if( ! is.na(populationPaths[i,j]) & populationPaths[i,j]!=0){
 					# "From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95"
-					populationPathData<-rbind(populationPathData,c(names[j],names[i],populationPaths[i,j],NA,NA,NA,NA)
+					
+					populationPathData<-rbind(populationPathData,data.frame(names[j],names[i],populationPaths[i,j],NA,NA,NA,NA))
+
+					
 				}
 			}
 		}
 
-		for(designNumber in specification[2]:specification[3]){
+		if(! is.null(populationPathData)){
+			for(designNumber in specification[2]:specification[3]){
 
-			#Add population paths
-			paths<-rbind(paths,cbind(populationPathData,replication,designNumber,"truevalue"))
-
+				#Add population paths
+				
+				
+				newRow<-cbind(populationPathData,replication,designNumber,"truevalue")
+				colnames(newRow)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95","replication","designNumber","analysis")
+				
+				paths<-rbind(paths,as.data.frame(newRow))
+				
+			}
 		}
-
-		#Reset all data objects
-
+		
+		# Set the column names. These are not set
+		
 		analysis<-NULL
 	}
 
 	# detect that we will read analysis results next
 	
-	else if (line=="sumscale" | line=="component" | line=="factor" | line=="pls"){
+	else if (line %in% analysisTypes){
 		# If analysis is null, this means that we just finished reading
 		# population data
 		
 		
-		analysis<-line
+		analysis<-which(analysisTypes==line)
 	}
 	
 	# If analysis is not specified yet, we are reading data related to the sample
@@ -83,20 +108,22 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	else if (is.null(analysis)){
 
 		# Detect that the next thing is results for different data
-		if(grep("Data [123]",line)){
+
+		if(grepl("Data [123]",line)){
 			dataNumber<-as.numeric(substr(line,5,6))
 		}
 		else if(line=="Population factor loadings"){
-			tempLoadings[[dataNumberl]]<-read.table("stdin",sep="\t")
+
+			
+			tempLoadings<-readData(con)
 
 			#Add factorloadings
-			
 			for(designNumber in specification[2]:specification[3]){
 				
-				# 7th column of the desing matrix is the identity column for 
+				# 7th column of the design matrix is the identity column for 
 				# data. Check that it matches and record the factor loadings
 				
-				if(designMatrix[desingNumber,7]==dataNumber){
+				if(designMatrix[designNumber,7]==dataNumber){
 					populationFactorLoadings[[replication,designNumber]]<-tempLoadings
 				}
 			}
@@ -107,48 +134,55 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 	else {
 		# Read measurement indeterminancy things
-		if(grep("Data [123]",line)){
+		if(grepl("Data [123]",line)){
 			dataNumber<-as.numeric(substr(line,6,6))
-			sds<-read.table("stdin",sep="\t")
+			sds<-readData(con)
 			
 			for(designNumber in specification[2]:specification[3]){
 				
-				# 7th column of the desing matrix is the identity column for 
+				# 7th column of the design matrix is the identity column for 
 				# data. Check that it matches and record the standard deviations
 				
-				if(designMatrix[desingNumber,7]==dataNumber){
-					constructEstimateSdsByData[[replication,designNumber]]<-sds
+				if(designMatrix[designNumber,7]==dataNumber){
+					constructEstimateSdsByData[[replication,designNumber,analysis]]<-sds
 				}
 			}
 
 			
 		}
-		else if(grep("Model [123]",line)){
-			modelNumber<-as.numeric(substr(line,6,6))
-			sds<-read.table("stdin",sep="\t")
+		else if(grepl("Model [123]",line)){
+			modelNumber<-as.numeric(substr(line,7,7))
+			sds<-readData(con)
 			
 			for(designNumber in specification[2]:specification[3]){
 				
-				# 5th column of the desing matrix is the identity column for 
+				# 5th column of the design matrix is the identity column for 
 				# model. Check that it matches and record the standard 
 				# deviations
 				
-				if(designMatrix[desingNumber,5]==modelNumber){
-					constructEstimateSdsByModel[[replication,designNumber]]<-sds
+				if(designMatrix[designNumber,5]==modelNumber){
+					constructEstimateSdsByModel[[replication,designNumber,analysis]]<-sds
 				}
 			}
 		}
 		# Read results from a replication
-		else if(grep("Row index [123]+",line)){
+		else if(grepl("Row index [0-9]+",line)){
 			designNumber<-as.numeric(substr(line,11,nchar(line)))
 		}
 		else if(line=="Paths"){
-			newPathSet<-read.table("stdin",sep="\t")
+			newPathSet<-readData(con)
 			# Add information about the analys and append to the results
-			paths<-rbind(paths,cbind(newPathSet,replication,designNumber,analysis)
+			
+			newRow<-cbind(newPathSet,replication,designNumber,analysisTypes[analysis])
+			colnames(newRow)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95","replication","designNumber","analysis")
+			
+
+			paths<-rbind(paths,newRow)
+
+
 		}
 		else if(line=="Correlations"){
-			correlations[[replication,designNumber,analysis]]<-read.table("stdin",sep="\t")
+			correlations[[replication,designNumber,analysis]]<-readData(con)
 		}
 
 	}
@@ -156,5 +190,5 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 # Save the data that were parsed from stdin
 
-save(c("designMatrix","paths","correlations","populationFactorLoadings","constructEstimateSdsByModel","constructEstimateSdsByData"))
+save(designMatrix,paths,correlations,populationFactorLoadings,constructEstimateSdsByModel,constructEstimateSdsByData
 ,file="data.RData")

@@ -102,7 +102,7 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 		
 		# It is possible that the PLS algorithm did not converge. In this case 
 		# the result object will be null. 
-		
+
 		results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators)
 		
 	}
@@ -153,7 +153,6 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 			labels <- c("Model","","Data")
 			label<-labels[multiplier]
 			for(i in 1:3){
-				cat(paste(label,i,"\n"))
 				# Index of the first replication that we are interested 
 				# in for this calculation.
 				
@@ -165,11 +164,16 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 				# PLS models can be con-convergent. If this happens, we do not 
 				# want to calculate the sds
 
-				if(is.null(results[[index1]][[modelTypeIndex]])|is.null(results[[index2]][[modelTypeIndex]])|is.null(results[[index3]][[modelTypeIndex]])){
-					cat("\nNo convergence\n")
-				}
-				
-				else{
+				# These are for debugging only. Need to be removed later.
+				cat("\n")
+				debugPrint(results[[index1]][[modelTypeIndex]])
+				debugPrint(results[[index2]][[modelTypeIndex]])
+				debugPrint(results[[index3]][[modelTypeIndex]])
+
+				if(! is.null(results[[index1]][[modelTypeIndex]]) & ! is.null(results[[index2]][[modelTypeIndex]]) & ! is.null(results[[index3]][[modelTypeIndex]])){
+
+					cat(paste("\n",label,i,"\n"))
+
 					sds<-NULL
 					for(constructIndex in 1:constructCount){
 						

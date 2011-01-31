@@ -164,12 +164,3 @@ generateTestedModel<-function(populationModelWhichPaths,omittedPathsShare,extraP
 
 	return(testedModel)
 }
-
-#
-# A wrapper for print to allow easily commenting out all unneccessary print commmands
-#
-
-debugPrint<-function(x){
-	print(x)
-}
-
