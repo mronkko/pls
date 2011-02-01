@@ -25,11 +25,15 @@ correlations<-array(list(rep(NULL,729*replications*4)),dim=c(replications,729,4)
 
 populationFactorLoadings<-array(list(rep(NULL,729*replications)),dim=c(replications,729),dimnames=c("replication","designNumber"))
 
+models<-array(list(rep(NULL,729*replications*2)),dim=c(replications,729,2),dimnames=c("replication","designNumber","type"))
+
+
 constructEstimateSdsByModel<-array(list(rep(NULL,729*replications*4)),dim=c(replications,729,4),dimnames=c("replication","designNumber","analysis"))
 
 constructEstimateSdsByData<-array(list(rep(NULL,729*replications*4)),dim=c(replications,729,4),dimnames=c("replication","designNumber","analysis"))
 
-con <- file("stdin", open = "r")
+
+con <- file("results.txt", open = "r")
 
 
 #Reset the analysis object
@@ -80,8 +84,6 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 			for(designNumber in specification[2]:specification[3]){
 
 				#Add population paths
-				
-				
 				newRow<-cbind(populationPathData,replication,designNumber,"truevalue")
 				colnames(newRow)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95","replication","designNumber","analysis")
 				
@@ -90,6 +92,16 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 			}
 		}
 		
+		
+		
+		# Store population model and tested models
+		
+		for(designNumber in specification[2]:specification[3]){
+			models[[replication,designNumber,1]]<- ! (is.na(populationPaths) | populationPaths==0)
+
+			models[[replication,designNumber,2]]<- matrix(specification[c((4+constructCount^2*(designMatrix[designNumber,5]+1)):(3+constructCount^2*(designMatrix[designNumber,5]+2)))],ncol=constructCount)
+		}
+
 		# Set the column names. These are not set
 		
 		analysis<-NULL
@@ -192,5 +204,5 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 
 # Save the data that were parsed from stdin
 
-save(designMatrix,paths,correlations,populationFactorLoadings,constructEstimateSdsByModel,constructEstimateSdsByData
+save(designMatrix,paths,correlations,populationFactorLoadings,constructEstimateSdsByModel,constructEstimateSdsByData,models
 ,file="data.RData")

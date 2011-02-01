@@ -4,7 +4,8 @@
 
 # The PLS packages
 library(plspm)
-library(semPLS)
+
+#library(semPLS)
 
 
 # Needed for generating data from covariance matrices
