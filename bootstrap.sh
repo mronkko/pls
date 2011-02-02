@@ -13,7 +13,3 @@
 
 echo 'install.packages(c("plspm","amap","diagram","shape"),repos="http://cran.r-project.org")' | sudo R --no-save 
 
-ls -la
-
-unzip cache.zip
-

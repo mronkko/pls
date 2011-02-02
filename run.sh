@@ -20,4 +20,8 @@ zip cache.zip functions.R parameters.R
 
 s3cmd put cache.zip input.txt map.R reduce.R bootstrap.sh s3://$INPUT/
 
-elastic-mapreduce --create --stream --input s3://$INPUT/input.txt --output s3://$OUTPUT/  --mapper s3://$INPUT/map.R --reducer s3://$INPUT/reduce.R --bootstrap-action s3://$INPUT/bootstrap.sh --cache s3://$INPUT/cache.zip#cache.zip --log-uri s3://$LOGS/ --instance-type c1.medium --instance-count 5
+elastic-mapreduce --create --stream --alive --input s3://$INPUT/input.txt --output s3://$OUTPUT/  --mapper s3://$INPUT/map.R --reducer s3://$INPUT/reduce.R --bootstrap-action s3://$INPUT/bootstrap.sh --cache-archive s3://$INPUT/cache.zip#test --log-uri s3://$LOGS/ --instance-type m1.small  --instance-count 1
+
+# c1.medium
+
+#/mnt/var/lib/hadoop/mapred/taskTracker/archive/mronkko-pls-analysisfiles/
