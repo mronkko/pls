@@ -5,7 +5,8 @@
 
 # plspm: The PLS package
 # MASS: Needed for generating data from covariance matrices
-install.packages(c("plspm","MASS"))
+# R.oo: Needed for trim-function
+install.packages(c("plspm","MASS","R.oo"),repos="http://cran.r-project.org",lib=".")
 
 
 

@@ -1,10 +1,7 @@
-#! /usr/bin/env Rscript
+#!/usr/bin/env Rscript
 # The reducer receives a population model and tested model. It runs PLS and summed scales on all specified experimental conditions for these models and outputs the results as CSV. 
 
-library(R.oo)
-
 source("parameters.R")
-
 source("functions.R")
 
 options(warn=-1)
@@ -91,20 +88,34 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 		
 		debugPrint("Start regression")
 		
-		results[[toString(rowIndex)]]$sumscale <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="sumscale")
+		
+		# It is possible that the algorithm do not converge. Although this is 
+		# rare, it will happen eventually. We deal with this by using try catch
+		
 
-		results[[toString(rowIndex)]]$component <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="component")
+		tryCatch(
+			results[[toString(rowIndex)]]$sumscale <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="sumscale")
+			,error = function(e){debugPrint(e)}
+		)
 
-		results[[toString(rowIndex)]]$factor <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="factor")
+		tryCatch(
+			results[[toString(rowIndex)]]$component <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="component")
+			,error = function(e){debugPrint(e)}
+		)
+
+		tryCatch(
+			results[[toString(rowIndex)]]$factor <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="factor")
+			,error = function(e){debugPrint(e)}
+		)
 
 		
 		debugPrint("Start pls")
 		
-		# It is possible that the PLS algorithm did not converge. In this case 
-		# the result object will be null. 
-
-		results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators)
-		
+		tryCatch(
+			results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators)
+			,error = function(e){debugPrint(e)}
+		)
+			
 	}
 	
 	# Calculate some statistics that need to be calculated over all analyses

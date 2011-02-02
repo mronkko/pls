@@ -5,20 +5,58 @@
 # The PLS packages
 library(plspm)
 
-#library(semPLS)
-
-
-# Needed for generating data from covariance matrices
-library(MASS)
-
 #
 # A wrapper for print to allow easily commenting out all unneccessary print commmands
 #
 debugPrint<-function(x){
-	# print(x)
+	print(x)
 }
 
+#
+# Draws a sample from multivariate normal distribution with the given covariance matrix
+#
+# This is from MASS package, version 3.7-9. Since we need only this one function, it does not
+# make sense to install the entire package, which is quite large.
+#
 
+mvrnorm <- function (n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE) 
+{
+    p <- length(mu)
+    if (!all(dim(Sigma) == c(p, p))) 
+        stop("incompatible arguments")
+    eS <- eigen(Sigma, symmetric = TRUE, EISPACK = TRUE)
+    ev <- eS$values
+    if (!all(ev >= -tol * abs(ev[1L]))) 
+        stop("'Sigma' is not positive definite")
+    X <- matrix(rnorm(p * n), n)
+    if (empirical) {
+        X <- scale(X, TRUE, FALSE)
+        X <- X %*% svd(X, nu = 0)$v
+        X <- scale(X, FALSE, TRUE)
+    }
+    X <- drop(mu) + eS$vectors %*% diag(sqrt(pmax(ev, 0)), p) %*% 
+        t(X)
+    nm <- names(mu)
+    if (is.null(nm) && !is.null(dn <- dimnames(Sigma))) 
+        nm <- dn[[1L]]
+    dimnames(X) <- list(nm, NULL)
+    if (n == 1) 
+        drop(X)
+    else t(X)
+}
+
+#
+# Removes white space at the beginning and end of a string
+#
+
+trim<-function(input){
+	#remove leading spaces
+	input<-sub('^[[:space:]]+','',input)
+	#remove trailing spaces
+	input<-sub('[[:space:]]+$','',input)
+	
+	return(input)
+}
 
 #
 # Generates a data object that has elements "constructs", "indicators", and
@@ -195,27 +233,17 @@ estimateWithPlspm<-function(model,data){
 	# zeros.
 	model[is.na(model)]<-0
 
-	# It is possible that the model does not converge, so we need to do some error handling. 
-
 	plsResults<-NULL
 	
-	tryCatch(
-		plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=TRUE)
-		,error = function(e){debugPrint(e)}
-	)
+	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=TRUE)
 	
-	if(is.null(plsResults)){
-		return(NULL)
-	}
-	else{
-		# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-		paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths)
+	# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
+	paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths)
 
-		colnames(paths)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
-		rownames(paths)<-c(1:nrow(paths))
+	colnames(paths)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+	rownames(paths)<-c(1:nrow(paths))
 
-		return(list(constructs=plsResults$latents,paths=paths))
-	}
+	return(list(constructs=plsResults$latents,paths=paths))
 }
 
 
