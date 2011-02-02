@@ -4,9 +4,9 @@
 # and saves these as an R workspace image that can be later loaded for analyses.
 #
 
-source("parameters.R")
-source("functions.R")
-source("functionsCombine.R")
+source("include/parameters.R")
+source("include/functions.R")
+source("include/functionsCombine.R")
 
 # Needed for trim-function
 library(R.oo) 

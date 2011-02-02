@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 # The reducer receives a population model and tested model. It runs PLS and summed scales on all specified experimental conditions for these models and outputs the results as CSV. 
 
-source("parameters.R")
-source("functions.R")
+source("include/parameters.R")
+source("include/functions.R")
 
 options(warn=-1)
 

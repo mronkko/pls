@@ -16,11 +16,11 @@
 rm(list = ls(all = TRUE))
 
 # Read simulation parameters
-source("parameters.R")
+source("include/parameters.R")
 
 # Read function definitions
-source("prepareFunctions.R")
-source("functions.R")
+source("include/prepareFunctions.R")
+source("include/functions.R")
 
 
 #

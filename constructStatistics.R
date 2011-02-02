@@ -9,7 +9,7 @@ library(psych)
 
 load("data.RData")
 
-source("parameters.R")
+source("include/parameters.R")
 
 
 constructStatistics=data.frame(construct=character(0),replication=numeric(0),designNumber=numeric(0),analysis=character(0),CR=numeric(0),AVE=numeric(0),minFactorLoading=numeric(0),meanFactorLoading=numeric(0),maxCrossLoading=numeric(0),maxCorrelationWithOtherConstruct=numeric(0),trueScoreCorrelation=numeric(0),deltaR2=numeric(0),sdByModels=numeric(0),sdByData=numeric(0), incomingPathsCorrect=numeric(0), incomingPathsExtra=numeric(0), incomingPathsOmitted=numeric(0), outgoingPathsCorrect=numeric(0), outgoingPathsExtra=numeric(0), outgoingPathsOmitted=numeric(0), estimatedR2=numeric(0), trueR2=numeric(0))
