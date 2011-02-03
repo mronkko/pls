@@ -233,5 +233,5 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 	debugPrint(paste("End of reduce task",counter,"  ",timeStarted," - ",Sys.time()))
 
 }
-wc
+
 close(con)

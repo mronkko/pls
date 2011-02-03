@@ -58,6 +58,7 @@ for(replication in 1:replications){
 										
 					indicatorCols<-which(colnames(thisCorrelations) %in% paste("i",((construct-1)*indicators+1):(construct*indicators),sep=""))
 
+					print(thisCorrelations)
 					CR<-sum(thisCorrelations[row,indicatorCols])^2/(sum(thisCorrelations[row,indicatorCols])^2+sum(1-thisCorrelations[row,indicatorCols]^2))
 					
 					# The denominator can be simplified since the indicators are

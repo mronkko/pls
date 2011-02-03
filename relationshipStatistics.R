@@ -18,10 +18,14 @@ relationshipStatistics=data.frame(from=character(0),to=character(0),replication=
 
 for(replication in 1:replications){
 	for(designNumber in 1:729){
+		thisPaths<-paths[paths$replication==replication & paths$designNumber==designNumber & paths$analysis=="truevalue",]
+
 		for(analysis in 1:4){
 
 			thisCorrelations <- correlations[[replication,designNumber,analysis]]
 
+			thisPaths<-paths[paths$replication==replication & paths$designNumber==designNumber & paths$analysis==analysis,]
+			
 			# If we are dealing with partial data, do the following 
 			# conditionally
 			
@@ -44,76 +48,43 @@ for(replication in 1:replications){
 						# Correlation is the sum of attenuation and bias. 
 						# Calculate the attenuation and then we know the bias 
 						# too
-			
-						attenuation<-
-						bias<-
+
+						trueCorrelation<-thisCorrelations[from,to]
+						estimatedCorrelation<-thisCorrelations[from+constructs,to+constructs]
+						
+						# Reliability of the construct estimate is the square of 
+						# the correlation between the construct and the true
+						# score. Hence the attenuation coefficient is the 
+						# product of the true score correlations. See Cohen p. 
+						# 55-56
+						
+						attenuationCoefficient<-thisCorrelations[from,from]*thisCorrelations[to,to]
+						
+						# Bias is estimated correlation minus true correlation 
+						# times attenuation. - This is a trivial calculation, so # we do not store the result
+						
+						# bias<-estimatedCorrelation-trueCorrelation*attenuationCoefficient
 						
 						
 						# REGRESSION COEFFICIENTS (hypothesis 3)
 						
-						# Calculate the efficiency (precision) of the estimate.
-						# How 
-						# Check which row is about this construct
-					
+						# Precision is the SD of difference between true 
+						# regression coefficient and the estimate
+						# Accuracy is the Mean difference between true 
+						# regression coefficient and the estimate
 						
+						
+						# colnames(newRow)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95","replication","designNumber","analysis")
+				
+						regressionTrueScore<-thisTruePaths[thisPaths$To==to & thisPaths$From==from,"Estimate"]
+						regressionEstimate<-thisPaths[thisPaths$To==to & thisPaths$From==from,"Estimate"]
 						# STANDARD ERRORS (hypothesis 4)
 						
-						
-						row<-which(rownames(thisCorrelations)==paste("C",construct,sep=""))
-					
-						# The correlation matrix is symmetric. This assignment makes 
-						# the rest of the code more readable.
-				
-						thisConstructCol<-row
-					
-					
-					
-					
-										
-						indicatorCols<-which(colnames(thisCorrelations) %in% paste("i",((construct-1)*indicators+1):(construct*indicators),sep=""))
+						regressionSE<-thisPaths[thisPaths$To==to & thisPaths$From==from,"Estimate"]
 
-						CR<-sum(thisCorrelations[row,indicatorCols])^2/(sum(thisCorrelations[row,indicatorCols])^2+sum(1-thisCorrelations[row,indicatorCols]^2))
-					
-						# The denominator can be simplified since the indicators are
-						# standardized
-					
-						AVE<-mean(thisCorrelations[row,indicatorCols]^2)
-					
-						# Minimum factor loading, Mean factor loading
-					
-						minFactorLoading<-min(thisCorrelations[row,indicatorCols])
-						meanFactorLoading<-mean(thisCorrelations[row,indicatorCols])
-
-						# Maximum cross-loading
-						crossLoadingCols<-allIndicatorCols[which(!( allIndicatorCols %in% indicatorCols))]
-					
-						maxCrossLoading<-max(thisCorrelations[row,crossLoadingCols])
-					
-						# Max correlation with other construct
-					
-						allConstructCols<-which(colnames(thisCorrelations) %in% paste("C",1:constructs,sep=""))
-						otherConstructCols<-allConstructCols[which(!( allConstructCols %in% thisConstructCol))]
-					
-						maxCorrelationWithOtherConstruct<-max(thisCorrelations[row,otherConstructCols])
-					
-					
-						# Correlation with true score
-					
-						trueScoreCol<-which(colnames(thisCorrelations)==paste("T",construct,sep=""))
-					
-						trueScoreCorrelation<-thisCorrelations[row,trueScoreCol]
-	
-						# Delta R2 when other true scores added as predictors
+						tValue<-regressionEstimate/regressionSE
+						pValue<-pt(abs(tValue),designMatrix[designNumber,"sampleSize"],lower.tail=FALSE)
 						
-						deltaR2=mat.regress(thisCorrelations,1:constructs,thisConstructCol)$R2-trueScoreCorrelation^2
-						
-						# Within data sd
-						
-						sdByData<-constructEstimateSdsByData[[replication,designNumber,analysis]][[construct]]
-						
-						# Within model sd
-						sdByModels<-constructEstimateSdsByModel[[replication,designNumber,analysis]][[construct]]
-	
 	
 						# Append the entire set to the data
 						
@@ -129,7 +100,7 @@ for(replication in 1:replications){
 print(constructStatistics)
 
 save(constructStatistics
-,file="constructStatistics.RData")
+,file="relationshipStatistics.RData")
 
 
 

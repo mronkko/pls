@@ -51,9 +51,9 @@ mvrnorm <- function (n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE)
 
 trim<-function(input){
 	#remove leading spaces
-	input<-sub('^[[:space:]]+','',input)
+	input<-sub("^[ \t]+","",input)
 	#remove trailing spaces
-	input<-sub('[[:space:]]+$','',input)
+	input<-sub("[ \t]+$","",input)
 	
 	return(input)
 }
@@ -340,6 +340,7 @@ createdesignMatrix <- function(){
 	# Sort by identity columns and return
 
 	designMatrix<-designMatrix[order(designMatrix[,1],designMatrix[,2],designMatrix[,3],designMatrix[,4],designMatrix[,5],designMatrix[,7]),]
+	colnames(designMatrix)<-c("numberOfConstructs","expectedNumberOfOutgoingPaths","populationPathValues","omittedPathsShare","extraPaths","sampleSize","indicatorCount","factorLoading","factorLoadingInterval","maxErrorCorrelation","methodVariance")
 	return(designMatrix)
 	
 }

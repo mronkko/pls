@@ -8,14 +8,10 @@ source("include/parameters.R")
 source("include/functions.R")
 source("include/functionsCombine.R")
 
-# Needed for trim-function
-library(R.oo) 
-
 # Initialize matrices
 designMatrix<-createdesignMatrix()
 
-# Paths are stored as a data.frame (which ever read.table defaults to) 
-
+# Paths are stored as a data.frame 
 paths<-NULL
 
 # Three dimensional array. First is the replication number, second is the
@@ -39,10 +35,13 @@ con <- file("results.txt", open = "r")
 #Reset the analysis object
 analysis<-NULL
 
-while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
+#A line number counter
+lineNumber<-0
+
+while (length(line <- trim(readLinesWithCounter(con, n = 1, warn = FALSE))) > 0) {
 	
 	debugPrint(line)
-	
+
 	#If the line is empty, do nothing
 	if (line==""){
 		next()
@@ -50,7 +49,7 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 	# Detect running a new design
 	else if(line=="Design"){
 	
-		line <- readLines(con, n = 1, warn = FALSE)
+		line <- readLinesWithCounter(con, n = 1, warn = FALSE)
 
 		specification<-sapply(unlist(strsplit(line, split="\t")),as.numeric)
 		replication<-specification[1]
@@ -184,7 +183,7 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 			designNumber<-as.numeric(substr(line,11,nchar(line)))
 		}
 		else if(line=="Paths"){
-			newPathSet<-readData(con)
+			newPathSet<-readData(con,allow.na=TRUE)
 			# Add information about the analys and append to the results
 			
 			newRow<-cbind(newPathSet,replication,designNumber,analysisTypes[analysis])

@@ -9,15 +9,15 @@
 # instead of stopping to first blank line.
 #
 
-readData <- function(connection){
+readData <- function(connection,allow.na=FALSE){
 	
-	# Create a fifo and write to it until we hit a blank line
+	# Create a file and write to it until we hit a blank line
 	
-	fifo<-fifo("")
+	file<-file("")
 	
-	debugPrint("reading data....")
-	
-	while (length(line <- readLines(connection, n = 1, warn = FALSE)) > 0) {
+	counter<-0	
+	while (length(line <- trim(readLinesWithCounter(connection, n = 1, warn = FALSE))) > 0) {
+		debugPrint(line)
 		if(line==""){
 			break()
 		}
@@ -25,11 +25,21 @@ readData <- function(connection){
 			# Just skip any lines created with Print
 		}
 		else{
-			writeLines(line,con=fifo)
+			writeLines(line,con=file)
 		}
 	}
 	
-	res<-read.delim(fifo)
-	debugPrint(res)
+	res<-read.delim(file)
+	if(! allow.na){
+		if(sum(is.na(res))>0){
+			print(res)
+			stop(paste("Matrix contains NA values. Line number",lineNumber))
+		}
+	}
 	return(res)
+}
+
+readLinesWithCounter <- function(con, n = 1, warn = FALSE){
+	lineNumber<<-lineNumber+1
+	return(readLines(con, n , warn ))
 }
