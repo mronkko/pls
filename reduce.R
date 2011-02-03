@@ -66,104 +66,55 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 	
 	for(rowIndex in startIndex:endIndex){
 
-		thisRow <- designMatrix[rowIndex,]
+		thisDesignRow <- designMatrix[rowIndex,]
 
 		# Check if model exists for this test. If not, read from specification.
 
-		if(is.null(testedModels[[thisRow[5]]])){
-			testedModels[[thisRow[5]]] <- matrix(specification[(4+matrixLength*(thisRow[5]+1)):(3+matrixLength*(thisRow[5]+2))],ncol=constructCount)
+		if(is.null(testedModels[[thisDesignRow[5]]])){
+			testedModels[[thisDesignRow[5]]] <- matrix(specification[(4+matrixLength*(thisDesignRow[5]+1)):(3+matrixLength*(thisDesignRow[5]+2))],ncol=constructCount)
 			# Model estimation requires that the names are correctly included
-			colnames(testedModels[[thisRow[5]]])<-paste("C",c(1:constructCount),sep="")
-			rownames(testedModels[[thisRow[5]]])<-paste("C",c(1:constructCount),sep="")
+			colnames(testedModels[[thisDesignRow[5]]])<-paste("C",c(1:constructCount),sep="")
+			rownames(testedModels[[thisDesignRow[5]]])<-paste("C",c(1:constructCount),sep="")
 
 		}
 		
 		# Check if data exists for this test. If not, generate. 
 
-		if(is.null(data[[thisRow[7]]])){
-			data[[thisRow[7]]]<-generateData(constructTrueScores,indicatorCounts[thisRow[7]],factorLoadings[thisRow[8]],factorLoadingIntervals[thisRow[9]],maxErrorCorrelations[thisRow[10]],methodVariances[thisRow[11]])
+		if(is.null(data[[thisDesignRow[7]]])){
+			data[[thisDesignRow[7]]]<-generateData(constructTrueScores,indicatorCounts[thisDesignRow[7]],factorLoadings[thisDesignRow[8]],factorLoadingIntervals[thisDesignRow[9]],maxErrorCorrelations[thisDesignRow[10]],methodVariances[thisDesignRow[11]])
 
 		}
 		
 		
-		debugPrint("Start regression")
-		
+		for(analysis in 1:length(analysisTypes)){
 		
 		# It is possible that the algorithm do not converge. Although this is 
 		# rare, it will happen eventually. We deal with this by using try catch
 		
 
-		tryCatch(
-			results[[toString(rowIndex)]]$sumscale <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="sumscale")
-			,error = function(e){debugPrint(e)}
-		)
-
-		tryCatch(
-			results[[toString(rowIndex)]]$component <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="component")
-			,error = function(e){debugPrint(e)}
-		)
-
-		tryCatch(
-			results[[toString(rowIndex)]]$factor <- estimateWithRegression(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators,method="factor")
-			,error = function(e){debugPrint(e)}
-		)
-
-		
-		debugPrint("Start pls")
-		
-		tryCatch(
-			results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisRow[5]]],data[[thisRow[7]]]$indicators)
-			,error = function(e){debugPrint(e)}
+		tryCatch({
+			if(analysisTypes[analysis]=="pls"){
+				results[[toString(rowIndex)]]$pls <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
+			}
+			else{
+				results[[toString(rowIndex)]]$sumscale <- estimateWithRegression(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,method=analysisTypes[analysis])
+			}},error = function(e){debugPrint(e)}
 		)
 			
 	}
 	
-	# Calculate some statistics that need to be calculated over all analyses
-	# done for this particular set of replications
-	
 	#
-	# Calculate correlations for each construct over all estimated models.
-	# We do this by calculating a mean score over all nine tests for each type
-	# of test and then test calculating how well each replication correlates 
-	# with the mean values
+	# Calculate estimate standard deviations
 	#
-
-
-	debugPrint("Start reporting")
-
-	# Print the results. Start with the full specification string (input line)
-
-	cat("\nDesign\n")
-	cat(line,"\n",sep="")
-
 	
-	#Loop over the three indicator data
+	standardDeviations<-null
 	
-	for(i in 1:3){
-		cat("\nData ",i,"\n",sep="")
-		#Print true factor loadings
-		cat("\nPopulation factor loadings\n")
-		tempMatrix<-matrix(data[[i]]$factorLoadings,nrow=1)
-		colnames(tempMatrix)<-names(data[[i]]$indicators)
-		write.table(tempMatrix,sep="\t")
-		
-	}
+	for(multiplier in c(3,1)){
 
-	#Loop ove model types and print results
-
-	for(modelTypeIndex in 1:length(results[[toString(startIndex)]])){
-		
-		cat("\n\n",names(results[[toString(startIndex)]])[modelTypeIndex],"\n\n")
-	
-		# Print calculate standard deviations of construct within cases over
-		# each data and each model. Calculate mean of sd by construct and print 
-		# to results
-
-		cat("\nConstruct score sds over data/model\n")
-		for(multiplier in c(3,1)){
-			labels <- c("Model","","Data")
-			label<-labels[multiplier]
 			for(i in 1:3){
+				
+				sds<-null
+
 				# Index of the first replication that we are interested 
 				# in for this calculation.
 				
@@ -172,66 +123,228 @@ while (length(line <- trim(readLines(con, n = 1, warn = FALSE))) > 0) {
 				index2<-toString(baseIndex+multiplier)
 				index3<-toString(baseIndex+2*multiplier)
 				
-				# PLS models can be con-convergent. If this happens, we do not 
+				# Models can be con-convergent. If this happens, we do not 
 				# want to calculate the sds
 
-				# These are for debugging only. Need to be removed later.
-				cat("\n")
-				debugPrint(results[[index1]][[modelTypeIndex]])
-				debugPrint(results[[index2]][[modelTypeIndex]])
-				debugPrint(results[[index3]][[modelTypeIndex]])
-
-				if(! is.null(results[[index1]][[modelTypeIndex]]) & ! is.null(results[[index2]][[modelTypeIndex]]) & ! is.null(results[[index3]][[modelTypeIndex]])){
-
-					cat(paste("\n",label,i,"\n"))
+				if(! is.null(results[[index1]][[analysis]]) & ! is.null(results[[index2]][[analysis]]) & ! is.null(results[[index3]][[analysis]])){
 
 					sds<-NULL
 					for(constructIndex in 1:constructCount){
 						
-						tempMatrix<-cbind(results[[index1]][[modelTypeIndex]]$constructs[,constructIndex],
-						results[[index2]][[modelTypeIndex]]$constructs[,constructIndex],
-						results[[index3]][[modelTypeIndex]]$constructs[,constructIndex])
+						tempMatrix<-cbind(results[[index1]][[analysis]]$constructs[,constructIndex],
+						results[[index2]][[analysis]]$constructs[,constructIndex],
+						results[[index3]][[analysis]]$constructs[,constructIndex])
 						
 						sds<-c(sds,mean(sd(t(tempMatrix))))
 					}
-					tempMatrix<-matrix(sds,nrow=1)
-					colnames(tempMatrix)<-names(data[[i]]$constructs)
-					write.table(tempMatrix,sep="\t")
-					cat("\n")
 				}
+				else{
+					sds<-rep(NA,constructCount)
+				}
+				# First three rows are within same model and the last three 
+				# within data
+				
+				standardDeviations<-rbind(standardDeviations,sds)
 			}
 		}
+	}
 	
-		# Loop over the nine tested models and print results
-		for(rowIndex in startIndex:endIndex){
+	#
+	# After this we will analyze and report all data. 
+	#
+	
+	# Initialize some variables that we will use in all reporting
 
-			thisRow <- designMatrix[rowIndex,]
+	correctModel<- ! (is.na(populationModel$paths) | populationModel$paths==0)
+	
+	
+	for(designNumber in startIndex:endIndex){
+		for(analysis in 1:length(analysisTypes)){
 
-			cat("\nRow index",rowIndex)
-			cat("\n\n")
+			#
+			# Construct level statistics first
+			#
 			
-			resultObj<-results[[toString(rowIndex)]][[modelTypeIndex]]
+			thisDesingRow<-desingMatrix[desingNumber
+			,]
+			thisResults<-results[[toString(rowIndex)]][[analysis]]
 
-			#Only print things if the model converged
+			# If the analysis did not converge, do not write anything
 			
-			if(is.null(resultObj)){
-				cat("\nNo convergence\n")
+			if(! is.null(thisResults)){
+			thisCorrelations <-cor(cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators)
+
+			indicatorCount<-indicatorCounts[thisDesignRow[7]]
+
+			testedModel<-models[thisDesignRow[5]]]
+
+			# Which columns of thisCorrelations are indicator correlations
+			allIndicatorCols<-c((2*constructCount+1):(2*constructCount+constructCount*indicatorCount))
+
+			allConstructCols<-(constructCount+1):(constructCount*2)
+			
+			for(construct in 1:constructCount){
+				
+				row=constructCount+construct
+				
+				# The correlation matrix is symmetric. This assignment makes 
+				# the rest of the code more readable.
+			
+				thisConstructCol<-row
+				
+				
+				# Composite reliability and AVE
+				#
+				# Fornell, C., and Larcker, D. F. 1981. “Evaluating 
+				# structural equation models with unobservable variables and 
+				# measurement error,” Journal of marketing research (18:1),
+				# pp. 39–50. Page 45-46
+				
+				
+				temp<-2*constructCount+(construct-1)*indicatorCount
+				indicatorCols<-(temp+1):(temp+indicatorCount)
+				CR<-sum(thisCorrelations[row,indicatorCols])^2/(sum(thisCorrelations[row,indicatorCols])^2+sum(1-thisCorrelations[row,indicatorCols]^2))
+				
+				# The denominator can be simplified since the indicatorCount are
+				# standardized
+				
+				AVE<-mean(thisCorrelations[row,indicatorCols]^2)
+				
+				# Minimum factor loading, Mean factor loading
+				
+				minFactorLoading<-min(thisCorrelations[row,indicatorCols])
+				meanFactorLoading<-mean(thisCorrelations[row,indicatorCols])
+
+				# Maximum cross-loading
+				crossLoadingCols<-allIndicatorCols[which(!( allIndicatorCols %in% indicatorCols))]
+				
+				maxCrossLoading<-max(thisCorrelations[row,crossLoadingCols])
+				
+				# Max correlation with other construct
+				
+				otherConstructCols<-allConstructCols[which(!( allConstructCols %in% thisConstructCol))]
+				
+				maxCorrelationWithOtherConstruct<-max(thisCorrelations[row,otherConstructCols])
+				
+				
+				# Correlation with true score
+				
+				trueScoreCol<-construct
+				
+				trueScoreCorrelation<-thisCorrelations[row,trueScoreCol]
+
+				# Delta R2 when other true scores added as predictors
+				
+				deltaR2=mat.regress(thisCorrelations,1:constructCount,thisConstructCol)$R2-trueScoreCorrelation^2
+				
+				# Within data sd
+				
+				sdByData<-standardDeviations[thisDesingRow[5]+3,construct]
+				
+				# Within model sd
+				
+				sdByModels<-standardDeviations[thisDesingRow[7],construct]
+				
+				# Incoming paths
+				
+				incomingPathsCorrect <- sum(testedModel[construct,]&correctModel[construct,],na.rm = TRUE)
+				incomingPathsExtra <- sum(testedModel[construct,]& ! correctModel[construct,],na.rm = TRUE)
+				incomingPathsOmitted <- sum((! testedModel[construct,]) & correctModel[construct,],na.rm = TRUE)
+				
+				
+				# Outgoing paths
+
+				outgoingPathsCorrect <- sum(testedModel[,construct]&correctModel[,construct],na.rm = TRUE)
+				outgoingPathsExtra <- sum(testedModel[,construct]& ! correctModel[,construct],na.rm = TRUE)
+				outgoingPathsOmitted <- sum((! testedModel[,construct]) & correctModel[,construct],na.rm = TRUE)
+
+				if( incomingPathsCorrect>0 | incomingPathsExtra>0 ){
+
+					# Estimated R2 for endogenous constructCount
+					indices<-c(which(testedModel[construct,]==1)+constructCount,constructCount+construct)
+
+					estimatedR2 <- mat.regress(thisCorrelations[indices,indices],c(1:length(indices)-1),length(indices))$R2
+					
+					indices<-indices-constructCount
+					
+					# True R2 for endogenous constructCount (same regression 
+					# with true scores)
+					
+					trueR2 <- mat.regress(thisCorrelations[indices,indices],c(1:length(indices)-1),length(indices))$R2
+					
+				
+				}
+				else{
+					estimatedR2<-NA
+					trueR2<-NA
+				}
+				
+				# Start a new row by printing "C" to mark this as a row that is # about constructs,the replication, desingNumber,
+				# constructNumber and then the results
+				
+				cat("C",replication,desingNumber,analysis,construct,CR, AVE, minFactorLoading, meanFactorLoading, maxCrossLoading, maxCorrelationWithOtherConstruct, trueScoreCorrelation, deltaR2, estimatedR2, trueR2, sdByData, sdByModels, incomingPathsCorrect, incomingPathsExtra, incomingPathsOmitted, outgoingPathsCorrect, outgoingPathsExtra, outgoingPathsOmitted sep="\t")
+				cat("\n")
 			}
-			else{
-				#Print path coefficients
-				cat("\nPaths\n")
-				write.table(resultObj$paths,sep="\t")
 	
+			#
+			# Then relationship level statistics
+			#
 	
-				#Print a correlation matrix of construct scores, true scores, andd indicators
-				cat("\nCorrelations\n")
-				write.table(cor(cbind(data[[thisRow[7]]]$constructs,resultObj$constructs,data[[thisRow[7]]]$indicators)),sep="\t")
-	
+			thisPaths<-data[[thisDesignRow[7]]]$paths
+		
+			# Loop over all correlations in the lower diagonal
+			
+			for(from in 1:(constructCount-1)){
+				for(to in (from+1):constructCount){
+			
+
+					# CORRELATIONS (hypothesis 2)
+					
+					# Correlation is the sum of attenuation and bias. 
+					# Calculate the attenuation and then we know the bias 
+					# too
+
+					trueCorrelation<-thisCorrelations[from,to]
+					estimatedCorrelation<-thisCorrelations[from+constructCount,to+constructCount]
+					
+					# Reliability of the construct estimate is the square of 
+					# the correlation between the construct and the true
+					# score. Hence the attenuation coefficient is the 
+					# product of the true score correlations. See Cohen p. 
+					# 55-56
+					
+					attenuationCoefficient<-thisCorrelations[from,from]*thisCorrelations[to,to]
+					
+					# Bias is estimated correlation minus true correlation 
+					# times attenuation. - This is a trivial calculation, so # we do not store the result
+					
+					# bias<-estimatedCorrelation-trueCorrelation*attenuationCoefficient
+					
+					
+					# REGRESSION COEFFICIENTS (hypothesis 3)
+					
+					# Precision is the SD of difference between true 
+					# regression coefficient and the estimate
+					# Accuracy is the Mean difference between true 
+					# regression coefficient and the estimate
+					
+					
+			
+					regressionTrueScore<-populationModel$paths[to,from]
+					regressionEstimate<-thisPaths[thisPaths$To==to & thisPaths$From==from,"Estimate"]
+					# STANDARD ERRORS (hypothesis 4)
+					
+					regressionSE<-thisPaths[thisPaths$To==to & thisPaths$From==from,"Estimate"]
+
+					cat("R",replication,desingNumber,analysis,to,from,trueCorrelation, estimatedCorrelation, attenuationCoefficient, regressionTrueScore, regressionEstimate, regressionSE,sep="\t")
+					
+					cat("\n")
+
+				}
 			}
 		}
 	}
 	debugPrint(paste("End of reduce task",counter,"  ",timeStarted," - ",Sys.time()))
-
 }
 
 close(con)
