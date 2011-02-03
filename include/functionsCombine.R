@@ -15,10 +15,10 @@ readData <- function(connection,allow.na=FALSE){
 	
 	file<-file("")
 	
-	counter<-0	
 	while (length(line <- trim(readLinesWithCounter(connection, n = 1, warn = FALSE))) > 0) {
 		debugPrint(line)
 		if(line==""){
+			writeLines(line,con=file)
 			break()
 		}
 		else if(grepl("^\\[[0-9]+\\]",line)){
@@ -41,5 +41,6 @@ readData <- function(connection,allow.na=FALSE){
 
 readLinesWithCounter <- function(con, n = 1, warn = FALSE){
 	lineNumber<<-lineNumber+1
+	debugPrint(lineNumber)
 	return(readLines(con, n , warn ))
 }
