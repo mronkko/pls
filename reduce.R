@@ -317,7 +317,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				# Then relationship level statistics
 				#
 				
-				thisPaths<-as.data.frame(results[[thisDesignRow[7]]][[analysis]]$paths)
+				thisPaths<-as.data.frame(results[[thisDesignRow[7]]][[analysis]]$paths, stringsAsFactors = FALSE)
 			
 				# Loop over all correlations in the lower diagonal
 				
@@ -378,7 +378,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 						cat("R",replication,designNumber,analysis,to,from,trueCorrelation, estimatedCorrelation, attenuationCoefficient, regressionTrueScore, regressionEstimate, regressionSE,sep="\t")
 						
 						cat("\n")
-	
 					} # To-constructs
 				} # From - constructs
 			} # Checking if results are null
