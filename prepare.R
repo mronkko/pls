@@ -19,7 +19,7 @@ rm(list = ls(all = TRUE))
 source("include/parameters.R")
 
 # Read function definitions
-source("include/prepareFunctions.R")
+source("include/functionsPrepare.R")
 source("include/functions.R")
 
 
