@@ -45,18 +45,6 @@ mvrnorm <- function (n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE)
     else t(X)
 }
 
-#
-# Removes white space at the beginning and end of a string
-#
-
-trim<-function(input){
-	#remove leading spaces
-	input<-sub("^[ \t]+","",input)
-	#remove trailing spaces
-	input<-sub("[ \t]+$","",input)
-	
-	return(input)
-}
 
 #
 # Generates a data object that has elements "constructs", "indicators", and
@@ -217,6 +205,9 @@ estimateWithRegression<-function(model,data,method){
 }
 
 estimateWithPlspm<-function(model,data){
+	
+	# Debug
+	stop("debug")
 	
 	constructCount=ncol(model)
 	indicatorCount=ncol(data)/constructCount
