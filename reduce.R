@@ -305,7 +305,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					# Start a new row by printing "C" to mark this as a row that is # about constructs,the replication, designNumber,
 					# constructNumber and then the results
 					
-					debugPrint(paste("replication=",replication,"designNumber=",designNumber,"analysis=",analysis,"construct=",construct,"CR=",CR, "AVE=",AVE, "minFactorLoading=",minFactorLoading, "meanFactorLoading=",meanFactorLoading, "maxCrossLoading=",maxCrossLoading, "maxCorrelationWithOtherConstruct=",maxCorrelationWithOtherConstruct, "trueScoreCorrelation=",trueScoreCorrelation, "deltaR2=",deltaR2,"estimatedR2=", estimatedR2,"trueR2", trueR2, "sdByData=",sdByData, "sdByModels=",sdByModels, "incomingPathsCorrect=",incomingPathsCorrect, "incomingPathsExtra=",incomingPathsExtra, "incomingPathsOmitted=",incomingPathsOmitted, "outgoingPathsCorrect=",outgoingPathsCorrect, "outgoingPathsExtra=",outgoingPathsExtra, "outgoingPathsOmitted=",outgoingPathsOmitted))
 					
 					cat("C",replication,designNumber,analysis,construct,CR, AVE, minFactorLoading, meanFactorLoading, maxCrossLoading, maxCorrelationWithOtherConstruct, trueScoreCorrelation, deltaR2, estimatedR2, trueR2, sdByData, sdByModels, incomingPathsCorrect, incomingPathsExtra, incomingPathsOmitted, outgoingPathsCorrect, outgoingPathsExtra, outgoingPathsOmitted, sep="\t")
 					cat("\n")
@@ -321,7 +320,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			
 				# Loop over all correlations in the lower diagonal
 				
-				debugPrint(thisPaths)
 
 				for(from in 1:(constructCount-1)){
 					for(to in (from+1):constructCount){
@@ -374,7 +372,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 							regressionEstimate<-NA
 							regressionSE<-NA
 						}
-						debugPrint(paste("replication=",replication,"designNumber=",designNumber,"analysis=",analysis,"to=",to,"from=",from,"trueCorrelation=",trueCorrelation, "estimatedCorrelation=",estimatedCorrelation, "attenuationCoefficient=",attenuationCoefficient, "regressionTrueScore=",regressionTrueScore, "regressionEstimate=",regressionEstimate, "regressionSE=",regressionSE))
 						cat("R",replication,designNumber,analysis,to,from,trueCorrelation, estimatedCorrelation, attenuationCoefficient, regressionTrueScore, regressionEstimate, regressionSE,sep="\t")
 						
 						cat("\n")

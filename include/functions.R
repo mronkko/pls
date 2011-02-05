@@ -9,7 +9,7 @@ library(plspm)
 # A wrapper for print to allow easily commenting out all unneccessary print commmands
 #
 debugPrint<-function(x){
-	# print(x)
+	print(x)
 }
 
 #
@@ -144,14 +144,22 @@ estimateWithRegression<-function(model,data,method){
 	constructScores<-data.frame(row.names =c(1:sampleSize))
 	
 		for ( i in 1:constructCount ){
+			
+			indicatorIndices<-c(((i-1)*indicatorCount+1):(i*indicatorCount))
+			
 			if(method=="sumscale"){
-				constructScores<-cbind(constructScores,rowSums(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))]))
+				constructScores<-cbind(constructScores,rowSums(data[,indicatorIndices]))
 			}
 			else if (method == "component"){
-				constructScores<-cbind(constructScores,princomp(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))],scores = TRUE)$scores[,1])
+				
+				# R tends to give principal components that have negative loadings.
+				# Reverse the component so that the loadings are positive.
+				
+				obj<-princomp(data[,indicatorIndices],scores = TRUE)
+				constructScores<-cbind(constructScores,obj$scores[,1]*((mean(obj$loadings[,1])>0)*2-1))
 			}
 			else if (method == "factor"){
-				constructScores<-cbind(constructScores,factanal(data[,c(((i-1)*indicatorCount+1):(i*indicatorCount))],1,scores="regression")$scores[,1])
+				constructScores<-cbind(constructScores,factanal(data[,indicatorIndices],1,scores="regression")$scores[,1])
 			}
 	}
 	
@@ -205,9 +213,6 @@ estimateWithRegression<-function(model,data,method){
 }
 
 estimateWithPlspm<-function(model,data){
-	
-	# Debug
-	stop("debug")
 	
 	constructCount=ncol(model)
 	indicatorCount=ncol(data)/constructCount
