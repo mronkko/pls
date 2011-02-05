@@ -3,6 +3,8 @@
 # This file installs the packages needed for the MapReduce job.
 #
 
+uname -a
+
 # plspm: The PLS package
 # psych: Needed to run regressions using correlation matrix as data
 # rest: dependencies for plspm

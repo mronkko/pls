@@ -2,6 +2,8 @@
 # Functions used when to drawing tables and figures
 #
 
+library(xtable)
+
 writeComparisonTable <- function(data,variables,file,analysisTypes){
 
 	tableData<-NULL
@@ -32,6 +34,8 @@ writeComparisonTable <- function(data,variables,file,analysisTypes){
 		}
 		tableData<-rbind(tableData,tableRow)
 	}
-
+	print(xtable(tableData),file=paste("results/",file,"_full.tex",sep=""))
+	print(xtable(tableData),file=paste("results/",file,"_body.tex",sep=""),only.contents=TRUE)
+	return(tableData)
 
 }

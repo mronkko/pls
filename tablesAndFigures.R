@@ -147,7 +147,7 @@ tempData<-constructData[,c("replication","designNumber","construct","analysis","
 
 tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
 
-writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table1.tex",analysisTypes=analysisTypes)
+writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table1",analysisTypes=analysisTypes)
 
 
 
