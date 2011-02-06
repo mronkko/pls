@@ -1,0 +1,30 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage{booktabs} 
+
+\begin{document}
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{lrrrr}
+ \toprule
+ & Sum sc.& Comp. & Factor & PLS \\
+\midrule
+%See http://newsgroups.derkeiler.com/Archive/Comp/comp.text.tex/2008-11/msg00090.html
+\csname @@input\endcsname table1_body.tex
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\input{table2_full.tex}
+
+\input{table3_full.tex}
+
+\input{table4_full.tex}
+
+\input{table5_full.tex}
+
+\input{table6_full.tex}
+
+\end{document}

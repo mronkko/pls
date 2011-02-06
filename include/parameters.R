@@ -1,6 +1,6 @@
 # Overall study related parameters
 
-replications<-1
+replications<-5
 
 # Model related parameters ( 3 x 3 x 3 = 27 combinations)
 # 3: 1-3

@@ -71,9 +71,9 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	data<-list('1'=NULL,'2'=NULL,'3'=NULL)
 	results<-list()
 	
-	for(rowIndex in startIndex:endIndex){
+	for(designNumber in startIndex:endIndex){
 
-		thisDesignRow <- designMatrix[rowIndex,]
+		thisDesignRow <- designMatrix[designNumber,]
 
 		# Check if model exists for this test. If not, read from specification.
 
@@ -89,7 +89,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		if(is.null(data[[thisDesignRow[7]]])){
 			data[[thisDesignRow[7]]]<-generateData(constructTrueScores,indicatorCounts[thisDesignRow[7]],factorLoadings[thisDesignRow[8]],factorLoadingIntervals[thisDesignRow[9]],maxErrorCorrelations[thisDesignRow[10]],methodVariances[thisDesignRow[11]])
-
 		}
 		
 		for(analysis in 1:length(analysisTypes)){
@@ -107,20 +106,20 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 			if(analysisTypes[analysis]=="pls"){
 				tryCatch(
-					results[[toString(rowIndex)]][[analysis]] <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
+					results[[toString(designNumber)]][[analysis]] <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
 					,error = function(e){
 						debugPrint(e)
-						results[[toString(rowIndex)]][[analysis]] <<- NA
+						results[[toString(designNumber)]][[analysis]] <<- NA
 					}
 				)
 			}
 			else{
 				tryCatch(
 
-					results[[toString(rowIndex)]][[analysis]] <- estimateWithRegression(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,method=analysisTypes[analysis])
+					results[[toString(designNumber)]][[analysis]] <- estimateWithRegression(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,method=analysisTypes[analysis])
 					,error = function(e){
 						debugPrint(e)
-						results[[toString(rowIndex)]][[analysis]] <<- NA
+						results[[toString(designNumber)]][[analysis]] <<- NA
 					}
 				)
 			}
@@ -190,7 +189,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			#
 			
 			thisdesignRow<-designMatrix[designNumber,]
-			thisResults<-results[[toString(rowIndex)]][[analysis]]
+			thisResults<-results[[toString(designNumber)]][[analysis]]
 
 			# If the analysis did not converge, do not write anything
 			
@@ -235,20 +234,19 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					
 					# Minimum factor loading, Mean factor loading
 					
-					minFactorLoading<-min(thisCorrelations[row,indicatorCols])
-					meanFactorLoading<-mean(thisCorrelations[row,indicatorCols])
+					minFactorLoading<-min(abs(thisCorrelations[row,indicatorCols]))
+					meanFactorLoading<-mean(abs(thisCorrelations[row,indicatorCols]))
 	
 					# Maximum cross-loading
 					crossLoadingCols<-allIndicatorCols[which(!( allIndicatorCols %in% indicatorCols))]
 					
-					maxCrossLoading<-max(thisCorrelations[row,crossLoadingCols])
+					maxCrossLoading<-max(abs(thisCorrelations[row,crossLoadingCols]))
 					
 					# Max correlation with other construct
 					
 					otherConstructCols<-allConstructCols[which(!( allConstructCols %in% thisConstructCol))]
 					
-					maxCorrelationWithOtherConstruct<-max(thisCorrelations[row,otherConstructCols])
-					
+					maxCorrelationWithOtherConstruct<-max(abs(thisCorrelations[row,otherConstructCols]))
 					
 					# Correlation with true score
 					

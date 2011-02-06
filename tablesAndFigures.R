@@ -16,6 +16,12 @@ source("include/parameters.R")
 source("include/functions.R")
 source("include/functionsTablesAndFigures.R")
 
+
+# Define labels for variables
+
+labels<-list(CR="CR",AVE="AVE",minFactorLoading="Minumum factor loading",meanFactorLoading="Mean factor loading",
+	maxCrossLoading="Maximum cross loading",AVEMinusMaxCorrelation="AVE - max correlation with other construct")
+
 #Only draw the tables and figures that do not yet exist.
 
 
@@ -130,29 +136,150 @@ if( ! exists("constructData")){
 }
 
 ######## TABLE 1 ############
-
-#
-# How frequently the correlation with true score is negative
-#
-# This does not go into the table to save space. Just print to output 
-
-for(i in 1:length(analysisTypes)){
-	count<-sum(constructData$analysis==i)
-	negatives<-sum(constructData$analysis==i & constructData$trueScoreCorrelation<0) 
-	print(paste("Analysis:",analysisTypes[i]," share of negative truescore correlations ",negatives,"/",count,"=",negatives/count))
+if(!file.exists("results/table1_full.tex")){
+	# General information about quality of measurement
+	
+	tempData<-constructData
+	
+	tempData$minFactorLoading<-abs(tempData$minFactorLoading)
+	tempData$meanFactorLoading<-abs(tempData$meanFactorLoading)
+	tempData$maxCrossLoading<-abs(tempData$maxCrossLoading)
+	
+	tempData$AVEMinusMaxCorrelation<-tempData$AVE-tempData$maxCorrelationWithOtherConstruct
+	
+	writeDescriptivesTable(tempData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
+	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table1",analysisTypes=analysisTypes,labels=labels)
 }
 
-# Fix the data so that negative correlations are not an issue
-tempData<-constructData[,c("replication","designNumber","construct","analysis","trueScoreCorrelation","deltaR2")]
+######## TABLE 2 ############
 
-tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
+if(!file.exists("results/table2_full.tex")){
 
-writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table1",analysisTypes=analysisTypes)
+	# Construct score reliablity and validity (Hypothesis 1)
+	
+	#
+	# How frequently the correlation with true score is negative
+	#
+	# This does not go into the table to save space. Just print to output 
+	
+	for(i in 1:length(analysisTypes)){
+		count<-sum(constructData$analysis==i)
+		negatives<-sum(constructData$analysis==i & constructData$trueScoreCorrelation<0) 
+		print(paste("Analysis:",analysisTypes[i]," share of negative truescore correlations ",negatives,"/",count,"=",negatives/count))
+	}
+	
+	
+	tempData<-constructData[,c("replication","designNumber","construct","analysis","trueScoreCorrelation","deltaR2")]
+
+	# Fix the data so that negative correlations are not an issue
+
+	tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
+	
+	writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table2",analysisTypes=analysisTypes)
+}
+
+######## TABLE 3 ############
+
+if(!file.exists("results/table3_full.tex")){
+
+	# Construct score stability (Hypotheses 1)
+	
+	tempData<-constructData[,c("replication","designNumber","construct","analysis","sdByData","sdByModels")]
+
+	writeComparisonTable(tempData,variables=c("sdByData","sdByModels"),file="table3",analysisTypes=analysisTypes)
+}
+
+#Only read in this data if it is not in memory already. It takes a while to read
+
+if( ! exists("relationshipData")){
+	relationshipData <- read.delim("data/relationships.csv")
+}
 
 
+######## TABLE 4 ############
 
+if(!file.exists("results/table4_full.tex")){
 
+	# Correlations (Hypothesis 2)
+	
+	# Attenuation and bias
 
+	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","trueCorrelation","estimatedCorrelation")]
+	tempData$bias<-tempData$estimatedCorrelation-tempData$trueCorrelation*tempData$attenuationCoefficient
+	writeComparisonTable(tempData,variables=c("attenuationCoefficient","bias"),file="table4",analysisTypes=analysisTypes)
+}
+
+######## TABLE 5 ############
+
+if(!file.exists("results/table5_full.tex")){
+
+	# Correlations (Hypothesis 2)
+	
+	# Attenuation and bias
+
+	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","trueCorrelation","estimatedCorrelation")]
+	tempData$error<-abs(tempData$estimatedCorrelation-tempData$trueCorrelation)
+	writeComparisonTable(tempData,variables=c("error"),file="table5",analysisTypes=analysisTypes)
+}
+
+######## TABLE 6 ############
+
+if(!file.exists("results/table6_full.tex")){
+
+	# Regression coefficients (Hypothesis 3)
+	
+	# Precision and accuracy
+	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
+	tempData$ARE<-abs(tempData$regressionTrueScore-tempData$regressionEstimate)
+	writeComparisonTable(tempData,variables=c("ARE","regressionSE"),file="table6",analysisTypes=analysisTypes)
+}
+
+####### DISTRIBUTION PLOTS ########
+
+#
+# Show that the distribution of parameter estimates around the true value do not # follow the t-distribution. Use only data without method variance here and
+# include correctly specified models. Only data with 100 observations
+#
+
+designMatrix<-createdesignMatrix()
+
+#
+# These 
+#
+
+if(FALSE){
+	CorretModelsWithoutMethodVariance<-relationshipData[relationshipData$designNumber %in% which((designMatrix[,4]==1) & (designMatrix[,5]==1) & (designMatrix[,11]==1)&(designMatrix[,6]==2)),]
+	
+	# Do a four by four matrix of distribution plots
+	
+	#pdf(file="results/figure1.pdf")
+	
+	limits<-c(.1,.25,.4)
+	
+	par(mfrow=c(length(analysisTypes),length(limits)+1)) 
+	
+	for(j in 1:(length(limits)+1)){
+		# Rows
+		dataSample<-CorretModelsWithoutMethodVariance
+		if(j<=length(limits)){
+			dataSample<-dataSample[abs(dataSample$regressionTrueScore)<=limits[j],]
+		}
+		if(j>1){
+			dataSample<-dataSample[abs(dataSample$regressionTrueScore)>limits[j-1],]
+		}
+		# Columns
+		for(i in 1:length(analysisTypes)){
+			d <- density((dataSample$regressionTrueScore-dataSample$regressionEstimate)[dataSample$analysis==i],na.rm=TRUE)
+			plot(d)
+		}
+	}
+	#dev.off()
+}
+
+#
+# PRAGMATIC PART: TYPE I AND TYPE II ERROR RATE
+#
+#
 
 
 

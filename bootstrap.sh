@@ -3,7 +3,12 @@
 # This file installs the packages needed for the MapReduce job.
 #
 
-uname -a
+
+# debian R upgrade (Source: http://www.r-bloggers.com/bootstrapping-the-latest-r-into-amazon-elastic-map-reduce/)
+echo "deb http://streaming.stat.iastate.edu/CRAN/bin/linux/debian lenny-cran/" | sudo tee -a /etc/apt/sources.list
+sudo apt-get update
+sudo apt-get -t lenny-cran install --yes --force-yes r-base r-base-dev
+
 
 # plspm: The PLS package
 # psych: Needed to run regressions using correlation matrix as data
