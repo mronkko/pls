@@ -22,7 +22,7 @@ writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 			tableRow<-cbind(tableRow,quantile(thisData,probs=probs))
 		}
 		colnames(tableRow)<-analysisTypes
-		tableRow<-cbind(paste(probs*100,"%",sep=""),tableRow)
+		tableRow<-data.frame(paste(probs*100,"%",sep=""),tableRow)
 		pos=c(pos,(i-1)*3)
 		command=c(command,paste("\\multicolumn{",ncol(tableRow),"}{l}{",labels[[varname]],"}\\\\"))
 		tableData<-rbind(tableData,tableRow)
@@ -30,9 +30,9 @@ writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 	
 	add.to.row<-list(pos=as.list(pos),command=command)
 	
-	print(xtable(tableData),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,digits=3)
-	print(xtable(tableData),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
-hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,digits=3)
+	print(xtable(tableData,digits=3),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row)
+	print(xtable(tableData,digits=3),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
+hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row)
 	return(tableData)
 
 }

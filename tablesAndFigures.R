@@ -24,10 +24,11 @@ labels<-list(CR="CR",AVE="AVE",minFactorLoading="Minumum factor loading",meanFac
 
 #Only draw the tables and figures that do not yet exist.
 
+# Figures 1, 2, and 3 are drawn with PowerPoint
 
-######## FIGURE 1 ############
+######## FIGURE 4 ############
 
-if(!file.exists("results/figure1.pdf")){
+if(!file.exists("results/figure4.pdf")){
 	#
 	# The code below creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
 	#
@@ -42,7 +43,7 @@ if(!file.exists("results/figure1.pdf")){
 	# END OF TEST PARAMETERS. 
 	
 	#Initialize a data frame for the results
-	results<-data.frame(PLS=as.numeric(NA),SEM=as.numeric(NA),Regression=as.numeric(NA),RealBeta=as.numeric(NA))[rep(NA,replications),]
+	results<-data.frame(PLS=as.numeric(NA),SEM=as.numeric(NA),Regression=as.numeric(NA),Beta=as.numeric(NA))[rep(NA,replications),]
 	
 	#Make a sequence from 0 to 1 consisting of uniformly distributed elements. These are the latent regression coefficients in our tests.
 	
@@ -109,22 +110,22 @@ B =~ b',paste(1:indicatorcount,collapse=" + b"),sep="")
 		results$PLS[[replication]]<-pls$path.coefs[2]
 		results$SEM[[replication]]<-inspect(sem,what="std.coef")$beta[2,1]
 		results$SumScale[[replication]]<-regression$coefficient[[2]]
-		results$RealBeta[[replication]]<-betas[[replication]]
+		results$Beta[[replication]]<-betas[[replication]]
 	
 	}
 	
 	
 	attach(results)
 	
-	pdf(file="results/figure1.pdf")
+	pdf(file="results/figure4.pdf",height=4)
 	
 	par(mfrow=c(1,3)) 
 	
-	plot(PLS ~ RealBeta, asp=1, ylim=c(-.4,1.1), xlim=c(0,1))
+	plot(PLS ~ Beta, asp=1, ylim=c(-.4,1.1), xlim=c(0,1))
 	abline(0, 1)
-	plot(SumScale ~ RealBeta, asp=1, ylim=c(-.4,1.1), xlim=c(0,1))
+	plot(SumScale ~ Beta, asp=1, ylim=c(-.4,1.1), xlim=c(0,1),ylab="Summed scales and regression")
 	abline(0, 1)
-	plot(SEM ~ RealBeta, asp=1, ylim=c(-.4,1.1), xlim=c(0,1))
+	plot(SEM ~ Beta, asp=1, ylim=c(-.4,1.1), xlim=c(0,1))
 	abline(0, 1)
 	dev.off()
 }
@@ -135,8 +136,10 @@ if( ! exists("constructData")){
 	constructData <- read.delim("data/constructs.csv")
 }
 
-######## TABLE 1 ############
-if(!file.exists("results/table1_full.tex")){
+# Table 1 and Table 2 are specified manually
+
+######## TABLE 3 ############
+if(!file.exists("results/table3_full.tex")){
 	# General information about quality of measurement
 	
 	tempData<-constructData
@@ -148,12 +151,12 @@ if(!file.exists("results/table1_full.tex")){
 	tempData$AVEMinusMaxCorrelation<-tempData$AVE-tempData$maxCorrelationWithOtherConstruct
 	
 	writeDescriptivesTable(tempData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
-	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table1",analysisTypes=analysisTypes,labels=labels)
+	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table3",analysisTypes=analysisTypes,labels=labels)
 }
 
-######## TABLE 2 ############
+######## TABLE 4 ############
 
-if(!file.exists("results/table2_full.tex")){
+if(!file.exists("results/table4_full.tex")){
 
 	# Construct score reliablity and validity (Hypothesis 1)
 	
@@ -175,18 +178,18 @@ if(!file.exists("results/table2_full.tex")){
 
 	tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
 	
-	writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table2",analysisTypes=analysisTypes)
+	writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes)
 }
 
-######## TABLE 3 ############
+######## TABLE 5 ############
 
-if(!file.exists("results/table3_full.tex")){
+if(!file.exists("results/table5_full.tex")){
 
 	# Construct score stability (Hypotheses 1)
 	
 	tempData<-constructData[,c("replication","designNumber","construct","analysis","sdByData","sdByModels")]
 
-	writeComparisonTable(tempData,variables=c("sdByData","sdByModels"),file="table3",analysisTypes=analysisTypes)
+	writeComparisonTable(tempData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes)
 }
 
 #Only read in this data if it is not in memory already. It takes a while to read
@@ -196,9 +199,9 @@ if( ! exists("relationshipData")){
 }
 
 
-######## TABLE 4 ############
+######## TABLE 6 ############
 
-if(!file.exists("results/table4_full.tex")){
+if(!file.exists("results/table6_full.tex")){
 
 	# Correlations (Hypothesis 2)
 	
@@ -206,12 +209,12 @@ if(!file.exists("results/table4_full.tex")){
 
 	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","trueCorrelation","estimatedCorrelation")]
 	tempData$bias<-tempData$estimatedCorrelation-tempData$trueCorrelation*tempData$attenuationCoefficient
-	writeComparisonTable(tempData,variables=c("attenuationCoefficient","bias"),file="table4",analysisTypes=analysisTypes)
+	writeComparisonTable(tempData,variables=c("attenuationCoefficient","bias"),file="table6",analysisTypes=analysisTypes)
 }
 
-######## TABLE 5 ############
+######## TABLE 7 ############
 
-if(!file.exists("results/table5_full.tex")){
+if(!file.exists("results/table7_full.tex")){
 
 	# Correlations (Hypothesis 2)
 	
@@ -219,19 +222,19 @@ if(!file.exists("results/table5_full.tex")){
 
 	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","trueCorrelation","estimatedCorrelation")]
 	tempData$error<-abs(tempData$estimatedCorrelation-tempData$trueCorrelation)
-	writeComparisonTable(tempData,variables=c("error"),file="table5",analysisTypes=analysisTypes)
+	writeComparisonTable(tempData,variables=c("error"),file="table7",analysisTypes=analysisTypes)
 }
 
-######## TABLE 6 ############
+######## TABLE 8 ############
 
-if(!file.exists("results/table6_full.tex")){
+if(!file.exists("results/table8_full.tex")){
 
 	# Regression coefficients (Hypothesis 3)
 	
 	# Precision and accuracy
 	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
 	tempData$ARE<-abs(tempData$regressionTrueScore-tempData$regressionEstimate)
-	writeComparisonTable(tempData,variables=c("ARE","regressionSE"),file="table6",analysisTypes=analysisTypes)
+	writeComparisonTable(tempData,variables=c("ARE","regressionSE"),file="table8",analysisTypes=analysisTypes)
 }
 
 ####### DISTRIBUTION PLOTS ########
