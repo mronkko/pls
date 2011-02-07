@@ -36,44 +36,34 @@ hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row
 	return(tableData)
 
 }
-writeComparisonTable <- function(data,variables,file,analysisTypes){
+writeComparisonTable <- function(data,variables,file,analysisTypes,labels){
 
-	doOnDesignLevel<-TRUE
-	compareEach<-FALSE
 	tableData<-NULL
 
+	tempdata<-data[,c("designNumber","analysis",variables)]
+	tempdata<-aggregate(tempdata, by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE)
+
+
+	comparisonData<-reshape(tempdata[,c("designNumber","analysis",variables)],v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
+	
+		
 	for(i in 1:length(analysisTypes)){
-		tableRow=data.frame(rownames=analysisTypes[i])
+		tableRow=data.frame(rownames=labels[[analysisTypes[i]]])
 		thisData<-data[data$analysis==i,]
 		for(j in 1:length(variables)){
 			
 			varname<-variables[j]
 			tableRow<-cbind(tableRow,t(quantile(thisData[,varname],probs=c(0.05,0.5,0.95),na.rm=TRUE)))
-			for(k in 1:length(analysisTypes)){
-				print(paste("Calculating table. Indexes are",i,j,k))
-				if(k!=i){
-					
-					# Calculate how often this analysis results in larger results than every other analysis
 
-					comparisonData<-data[data$analysis==k,]
-					mergedData<-merge(thisData,comparisonData,by=intersect(names(thisData),c("replication","designNumber","construct","to","from")))
-					comparison<-mergedData[,paste(varname,".x",sep="")]>mergedData[,paste(varname,".y",sep="")]
-					
-					if(doOnDesignLevel){
-						# in how many designs this is better than the alternative
-						agg<-aggregate(comparison, by=list(mergedData$designNumber),  FUN=mean, na.rm=TRUE)
-						tableRow<-cbind(tableRow,sum(agg[,2]>.5))
-					}
-					else{
-						tableRow<-cbind(tableRow,sum(comparison,na.rm=TRUE)/sum(!is.na(comparison)))
-					}
-				}
-				else{
-					tableRow<-cbind(tableRow,NA)
-				}
-				colnames(tableRow)[ncol(tableRow)]<-analysisTypes[k]
+			# Calculate how often this analysis results in larger results than every other analysis
+
+			tableRow<-cbind(tableRow,sum(comparisonData[,paste(varname,i,sep=".")] == apply(comparisonData[,paste(varname,1:length(analysisTypes),sep=".")], 1, max)))
+
+			# Calculate how often this analysis results in smaller results than every other analysis
+
+			tableRow<-cbind(tableRow,sum(comparisonData[,paste(varname,i,sep=".")] == apply(comparisonData[,paste(varname,1:length(analysisTypes),sep=".")], 1, min)))
+
 	
-			}
 		}
 		tableData<-rbind(tableData,tableRow)
 	}

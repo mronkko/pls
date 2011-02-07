@@ -91,6 +91,7 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 
 \begin{table}[ht]
 \begin{center}
+\caption{Statistics on measurement quality}
 \begin{tabular}{lrrrr}
  \toprule
  & Sum sc.& Comp. & Factor & PLS \\
@@ -102,15 +103,80 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 \end{center}
 \end{table}
 
+% True scores correlations
 
-\input{table4_full.tex}
+\begin{table}[ht]
+\begin{center}
+\caption{Reliability and bias of measurement}
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+&\multicolumn{5}{c}{Reliability}&\multicolumn{5}{c}{Bias} \\
+\cmidrule(l{.75em}){2-6}\cmidrule(l{.75em}){7-11}
+\multicolumn{1}{c}{Analysis}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L} \\
+\midrule
+\input{table4_body.tex}
+\bottomrule
+\multicolumn{11}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
+\multicolumn{11}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
+\end{tabular}
+\end{center}
+\end{table}
 
-\input{table5_full.tex}
+%Measurement stability
 
-\input{table6_full.tex}
+\begin{table}[ht]
+\begin{center}
+\caption{Stability of measurement over data and models}
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+&\multicolumn{5}{c}{Construct score}&\multicolumn{5}{c}{Construct scores} \\
+&\multicolumn{5}{c}{SD over data}&\multicolumn{5}{c}{SD over models} \\
+\cmidrule(l{.75em}){2-6}\cmidrule(l{.75em}){7-11}
+\multicolumn{1}{c}{Analysis}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L} \\
+\midrule
+\input{table5_body.tex}
+\bottomrule
+\multicolumn{11}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
+\multicolumn{11}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
+\end{tabular}
+\end{center}
+\end{table}
 
-\input{table7_full.tex}
+% Correlations
 
-\input{table8_full.tex}
+\begin{table}[ht]
+\begin{center}
+\caption{Attenuation, bias, and error of correlations}
+\begin{tabular}{lrrrrrrrrrrrrrrr}
+\toprule
+&\multicolumn{5}{c}{Attenuation coefficient}&\multicolumn{5}{c}{Bias}&\multicolumn{5}{c}{Error} \\
+\cmidrule(l{.75em}){2-6}\cmidrule(l{.75em}){7-11}\cmidrule(l{.75em}){12-16}
+\multicolumn{1}{c}{Analysis}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}  \\
+\midrule
+\input{table6_body.tex}
+\bottomrule
+\multicolumn{16}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
+\multicolumn{16}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\begin{center}
+\caption{Average relative error and estimated standard error of regression}
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+&\multicolumn{5}{c}{Average}&\multicolumn{5}{c}{Estimated} \\
+&\multicolumn{5}{c}{relative error}&\multicolumn{5}{c}{standard error} \\
+\cmidrule(l{.75em}){2-6}\cmidrule(l{.75em}){7-11}
+\multicolumn{1}{c}{Analysis}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L} \\
+\midrule
+\input{table7_body.tex}
+\bottomrule
+\multicolumn{11}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
+\multicolumn{11}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
+\end{tabular}
+\end{center}
+\end{table}
 
 \end{document}

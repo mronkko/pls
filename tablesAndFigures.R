@@ -19,8 +19,11 @@ source("include/functionsTablesAndFigures.R")
 
 # Define labels for variables
 
-labels<-list(CR="CR",AVE="AVE",minFactorLoading="Minumum factor loading",meanFactorLoading="Mean factor loading",
-	maxCrossLoading="Maximum cross loading",AVEMinusMaxCorrelation="AVE - max correlation with other construct")
+labels<-list(CR="CR",AVE="Root AVE",minFactorLoading="Minumum factor loading",meanFactorLoading="Mean factor loading",
+	maxCrossLoading="Maximum cross loading",AVEMinusMaxCorrelation="Root AVE - max correlation",sumscale="Summed scales",component="Components",factor="Factors",pls="PLS")
+
+designMatrix<-createdesignMatrix()
+
 
 #Only draw the tables and figures that do not yet exist.
 
@@ -85,7 +88,7 @@ if(!file.exists("results/figure4.pdf")){
 	
 		tryCatch(
 			pls <- plspm(indicators,innermodel,outermodel, modes)
-				,error = function(e){
+				,correlationError = function(e){
 				print(e)
 				traceback()
 				continue<-1
@@ -134,31 +137,6 @@ B =~ b',paste(1:indicatorcount,collapse=" + b"),sep="")
 
 if( ! exists("constructData")){
 	constructData <- read.delim("data/constructs.csv")
-}
-
-# Table 1 and Table 2 are specified manually
-
-######## TABLE 3 ############
-if(!file.exists("results/table3_full.tex")){
-	# General information about quality of measurement
-	
-	tempData<-constructData
-	
-	tempData$minFactorLoading<-abs(tempData$minFactorLoading)
-	tempData$meanFactorLoading<-abs(tempData$meanFactorLoading)
-	tempData$maxCrossLoading<-abs(tempData$maxCrossLoading)
-	
-	tempData$AVEMinusMaxCorrelation<-tempData$AVE-tempData$maxCorrelationWithOtherConstruct
-	
-	writeDescriptivesTable(tempData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
-	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table3",analysisTypes=analysisTypes,labels=labels)
-}
-
-######## TABLE 4 ############
-
-if(!file.exists("results/table4_full.tex")){
-
-	# Construct score reliablity and validity (Hypothesis 1)
 	
 	#
 	# How frequently the correlation with true score is negative
@@ -171,14 +149,42 @@ if(!file.exists("results/table4_full.tex")){
 		print(paste("Analysis:",analysisTypes[i]," share of negative truescore correlations ",negatives,"/",count,"=",negatives/count))
 	}
 	
+	tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
+	tempData$minFactorLoading<-abs(tempData$minFactorLoading)
+	tempData$meanFactorLoading<-abs(tempData$meanFactorLoading)
+	tempData$maxCrossLoading<-abs(tempData$maxCrossLoading)
+
+	# We typically examine the square root of AVE
+
+	tempData$AVE<-sqrt(tempData$AVE)
+	tempData$AVEMinusMaxCorrelation<-tempData$AVE-tempData$maxCorrelationWithOtherConstruct
+
+}
+
+# Table 1 and Table 2 are specified manually
+
+######## TABLE 3 ############
+if(!file.exists("results/table3_full.tex")){
+	# General information about quality of measurement
+	
+	tempData<-constructData
+	writeDescriptivesTable(tempData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
+	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table3",analysisTypes=analysisTypes,labels=labels)
+}
+
+######## TABLE 4 ############
+
+if(!file.exists("results/table4_full.tex")){
+
+	# Construct score reliablity and validity (Hypothesis 1)
 	
 	tempData<-constructData[,c("replication","designNumber","construct","analysis","trueScoreCorrelation","deltaR2")]
 
 	# Fix the data so that negative correlations are not an issue
 
-	tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
+	writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes,labels=labels)
 	
-	writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes)
+	# Show the experimental conditions in which PLS was best
 }
 
 ######## TABLE 5 ############
@@ -189,13 +195,17 @@ if(!file.exists("results/table5_full.tex")){
 	
 	tempData<-constructData[,c("replication","designNumber","construct","analysis","sdByData","sdByModels")]
 
-	writeComparisonTable(tempData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes)
+	writeComparisonTable(tempData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes,labels=labels)
 }
 
 #Only read in this data if it is not in memory already. It takes a while to read
 
 if( ! exists("relationshipData")){
 	relationshipData <- read.delim("data/relationships.csv")
+	relationshipData$regressionARE<-abs(relationshipData$regressionTrueScore-relationshipData$regressionEstimate)
+
+	relationshipData$correlationBias<-relationshipData$estimatedCorrelation-relationshipData$trueCorrelation*relationshipData$correlationAttenuationCoefficient
+	relationshipData$correlationError<-abs(relationshipData$estimatedCorrelation-relationshipData$trueCorrelation)
 }
 
 
@@ -205,36 +215,48 @@ if(!file.exists("results/table6_full.tex")){
 
 	# Correlations (Hypothesis 2)
 	
-	# Attenuation and bias
+	# Attenuation and correlationBias
 
-	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","trueCorrelation","estimatedCorrelation")]
-	tempData$bias<-tempData$estimatedCorrelation-tempData$trueCorrelation*tempData$attenuationCoefficient
-	writeComparisonTable(tempData,variables=c("attenuationCoefficient","bias"),file="table6",analysisTypes=analysisTypes)
+	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","correlationAttenuationCoefficient","trueCorrelation","estimatedCorrelation")]
+	writeComparisonTable(tempData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes,labels=labels)
 }
 
 ######## TABLE 7 ############
 
 if(!file.exists("results/table7_full.tex")){
 
-	# Correlations (Hypothesis 2)
+	# Regression coefficients (Hypothesis 3)
 	
-	# Attenuation and bias
-
-	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","trueCorrelation","estimatedCorrelation")]
-	tempData$error<-abs(tempData$estimatedCorrelation-tempData$trueCorrelation)
-	writeComparisonTable(tempData,variables=c("error"),file="table7",analysisTypes=analysisTypes)
+	# Precision and accuracy
+	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","correlationAttenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
+	writeComparisonTable(tempData,variables=c("regressionARE","regressionSE"),file="table7",analysisTypes=analysisTypes,labels=labels)
 }
 
 ######## TABLE 8 ############
 
 if(!file.exists("results/table8_full.tex")){
 
-	# Regression coefficients (Hypothesis 3)
+	# Rare events logistic regression on when PLS is better than others.
+	
+	tempdata<-aggregate(constructData, by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE)
+	
+	tempdata<-merge(tempdata,aggregate(relationshipData, by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE))
+
+	variables<-NULL
+
+}
+
+######## TABLE 9 ############
+
+if(FALSE & !file.exists("results/table9_full.tex")){
+
+	# Regression on all quality measures. Not grouped by experimental 
+	# conditions. This results in a huge regression table
 	
 	# Precision and accuracy
-	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","attenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
-	tempData$ARE<-abs(tempData$regressionTrueScore-tempData$regressionEstimate)
-	writeComparisonTable(tempData,variables=c("ARE","regressionSE"),file="table8",analysisTypes=analysisTypes)
+	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","correlationAttenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
+	tempData$regressionARE<-abs(tempData$regressionTrueScore-tempData$regressionEstimate)
+	writeComparisonTable(tempData,variables=c("regressionARE","regressionSE"),file="table9",analysisTypes=analysisTypes,labels=labels)
 }
 
 ####### DISTRIBUTION PLOTS ########
@@ -244,7 +266,7 @@ if(!file.exists("results/table8_full.tex")){
 # include correctly specified models. Only data with 100 observations
 #
 
-designMatrix<-createdesignMatrix()
+
 
 #
 # These 
