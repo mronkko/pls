@@ -1,5 +1,6 @@
 \documentclass[a4paper,10pt]{article}
 \usepackage{booktabs} 
+\usepackage{dcolumn} 
 \usepackage{graphicx}
 
 \setlength{\textwidth}{6.5in}
@@ -176,6 +177,13 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 \multicolumn{11}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
 \multicolumn{11}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
 \end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\begin{center}
+\caption{Rare events logistic regression}
+\input{table8_full.tex}
 \end{center}
 \end{table}
 

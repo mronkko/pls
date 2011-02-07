@@ -6,8 +6,8 @@
 library(plspm)
 library(lattice)
 library(lavaan)
-library(reshape)
 library(car)
+library(Zelig)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -167,8 +167,7 @@ if( ! exists("constructData")){
 if(!file.exists("results/table3_full.tex")){
 	# General information about quality of measurement
 	
-	tempData<-constructData
-	writeDescriptivesTable(tempData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
+	writeDescriptivesTable(constructData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
 	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table3",analysisTypes=analysisTypes,labels=labels)
 }
 
@@ -178,11 +177,8 @@ if(!file.exists("results/table4_full.tex")){
 
 	# Construct score reliablity and validity (Hypothesis 1)
 	
-	tempData<-constructData[,c("replication","designNumber","construct","analysis","trueScoreCorrelation","deltaR2")]
 
-	# Fix the data so that negative correlations are not an issue
-
-	writeComparisonTable(tempData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(constructData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes,labels=labels)
 	
 	# Show the experimental conditions in which PLS was best
 }
@@ -193,9 +189,7 @@ if(!file.exists("results/table5_full.tex")){
 
 	# Construct score stability (Hypotheses 1)
 	
-	tempData<-constructData[,c("replication","designNumber","construct","analysis","sdByData","sdByModels")]
-
-	writeComparisonTable(tempData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(constructData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes,labels=labels)
 }
 
 #Only read in this data if it is not in memory already. It takes a while to read
@@ -217,8 +211,7 @@ if(!file.exists("results/table6_full.tex")){
 	
 	# Attenuation and correlationBias
 
-	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","correlationAttenuationCoefficient","trueCorrelation","estimatedCorrelation")]
-	writeComparisonTable(tempData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(relationshipData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes,labels=labels)
 }
 
 ######## TABLE 7 ############
@@ -228,22 +221,51 @@ if(!file.exists("results/table7_full.tex")){
 	# Regression coefficients (Hypothesis 3)
 	
 	# Precision and accuracy
-	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","correlationAttenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
-	writeComparisonTable(tempData,variables=c("regressionARE","regressionSE"),file="table7",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(relationshipData,variables=c("regressionARE","regressionSE"),file="table7",analysisTypes=analysisTypes,labels=labels)
 }
 
 ######## TABLE 8 ############
 
 if(!file.exists("results/table8_full.tex")){
 
+	dependents<-c("deltaR2","sdByData","correlationBias","correlationError","regressionARE","regressionSE")
+	
+	allVars<-c("analysis","designNumber",dependents)
+	
 	# Rare events logistic regression on when PLS is better than others.
 	
-	tempdata<-aggregate(constructData, by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE)
+	tempdata<-aggregate(constructData[,intersect(names(constructData),allVars)], by=list(constructData$designNumber,constructData$analysis),  FUN=mean, na.rm=TRUE)
 	
-	tempdata<-merge(tempdata,aggregate(relationshipData, by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE))
+	tempdata<-merge(tempdata,aggregate(relationshipData[,intersect(names(relationshipData),allVars)], by=list(relationshipData$designNumber,relationshipData$analysis),  FUN=mean, na.rm=TRUE))
 
-	variables<-NULL
+	tempdata<-reshape(tempdata,v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
 
+	#Order the data bu design number
+
+	tempdata<-tempdata[order(tempdata[,"designNumber"]),]
+
+	
+	tempdata2<-data.frame(tempdata[,"designNumber"])
+	
+	for(i in 1:length(dependents)){
+		tempdata2[,dependents[i]]<-tempdata[,paste(dependents[i],4,sep=".")]==apply(tempdata[,paste(dependents[i],1:4,sep=".")],1,min)
+	}
+
+	#Merge the design numbers
+	
+	tempdata2<-cbind(tempdata2,designMatrix)
+
+	relogit<-list()
+	for(i in 1:length(dependents)){
+		
+		relogit[[length(relogit)+1]]<-zelig(as.formula(paste(dependents[i],"~",paste(colnames(designMatrix),collapse=" + "))), model="relogit",data=tempdata2,tau=c(mean(tempdata2[,dependents[i]])))
+		
+		# TODO: relogit postestimation
+		
+	}
+	#Very cumbersome, but works.
+	for(i in 1:6) assign(paste("m",i,sep=""),relogit[[i]])
+	write(format(mtable(m1,m2,m3,m4,m5,m6),forLaTeX=TRUE),file="results/table8_full.tex")
 }
 
 ######## TABLE 9 ############
@@ -266,11 +288,6 @@ if(FALSE & !file.exists("results/table9_full.tex")){
 # include correctly specified models. Only data with 100 observations
 #
 
-
-
-#
-# These 
-#
 
 if(FALSE){
 	CorretModelsWithoutMethodVariance<-relationshipData[relationshipData$designNumber %in% which((designMatrix[,4]==1) & (designMatrix[,5]==1) & (designMatrix[,11]==1)&(designMatrix[,6]==2)),]
