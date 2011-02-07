@@ -39,6 +39,7 @@ hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row
 writeComparisonTable <- function(data,variables,file,analysisTypes){
 
 	doOnDesignLevel<-TRUE
+	compareEach<-FALSE
 	tableData<-NULL
 
 	for(i in 1:length(analysisTypes)){
@@ -70,7 +71,7 @@ writeComparisonTable <- function(data,variables,file,analysisTypes){
 				else{
 					tableRow<-cbind(tableRow,NA)
 				}
-					colnames(tableRow)[ncol(tableRow)]<-analysisTypes[k]
+				colnames(tableRow)[ncol(tableRow)]<-analysisTypes[k]
 	
 			}
 		}
