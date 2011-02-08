@@ -2,12 +2,13 @@
 # This file creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
 #
 
+setwd("/Users/mronkko/Documents/Research/pls")
 
 library(plspm)
 library(lattice)
 library(lavaan)
 library(car)
-library(Zelig)
+library(lme4)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -178,8 +179,18 @@ if( ! exists("constructData")){
 
 	constructData$AVE<-sqrt(constructData$AVE)
 	constructData$AVEMinusMaxCorrelation<-constructData$AVE-constructData$maxCorrelationWithOtherConstruct
+	
+	print("Start merging design data to constructs")
+	print(object.size(constructData),units="Mb")
+	print(object.size(designMatrix),units="Mb")
+
+	# Merge design related things
+	constructData<-merge(constructData,designMatrix,by="designNumber")
+
+	print("Done merging design data to constructs")
 
 }
+
 
 # Table 1 and Table 2 are specified manually
 
@@ -227,8 +238,49 @@ if( ! exists("relationshipData")){
 	relationshipData$sampleSize<-sampleSizes[relationshipData$sampleSize]
 	relationshipData$t<-relationshipData$regressionEstimate/relationshipData$regressionSE
 	relationshipData$p<-(1-pt(abs(relationshipData$t),relationshipData$sampleSize-1))*2
-}
+	
+	# Type I error is when the population regression coefficient is either zero 
+	# or of different sign than the estimated coefficient
+	
+	relationshipData$TypeI05<-relationshipData$p<=.05 & relationshipData$regressionEstimate*relationshipData$regressionTrueScore <=0
+	
+	relationshipData$TypeI01<-relationshipData$p<=.01 & relationshipData$regressionEstimate*relationshipData$regressionTrueScore <=0
 
+	# Type II error is when the population regression coefficient is different from zero but the p-value is non-significant sign than the estimated coefficient
+
+	relationshipData$TypeII05<-relationshipData$p>.05 & relationshipData$regressionTrueScore == 0
+
+	relationshipData$TypeII01<-relationshipData$p>.01 & relationshipData$regressionTrueScore == 0
+
+	# Merge construct related stuff. These are suffixed as to and from. Do not 
+	# merge design related things at this point
+	temp<-constructData[,c("designNumber",setdiff(names(constructData),names(designMatrix)))]
+	
+	print("Start merging construct data to relationships")
+	
+	print(object.size(constructData),units="Mb")
+	print(object.size(designMatrix),units="Mb")
+	print(object.size(relationshipData),units="Mb")
+	print(object.size(temp),units="Mb")
+
+	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"))
+
+	print("Part one of merging construct data to relationships done")
+	
+	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"),suffixes=c(".from",".to"))
+	
+	rm(temp)
+	
+	print("Done merging construct data to relationships")
+
+	print("Start merging design data to relationships")
+	
+	# Merge design related things
+	relationshipData<-merge(relationshipData,designMatrix,by="designNumber")
+
+	print("Done merging design data to relationships")
+
+}
 
 ######## TABLE 6 ############
 
@@ -251,11 +303,32 @@ if(!file.exists("results/table7_full.tex")){
 	writeComparisonTable(relationshipData,variables=c("regressionARE","regressionSE"),file="table7",analysisTypes=analysisTypes,labels=labels)
 }
 
-######## TABLE 8 ############
+######## TABLE 8 ) ############
 
-if( !file.exists("results/table8_full.tex")){
 
-	dependents<-c("deltaR2","sdByData","correlationBias","correlationError","regressionARE","regressionSE")
+if(!file.exists("results/table8_full.tex")){
+
+	# TYPE I and TYPE II error rate at .05
+	
+	writeComparisonTable(relationshipData,variables=c("TypeI05","TypeII05"),file="table8",analysisTypes=analysisTypes,labels=labels)
+
+}
+
+######## TABLE 9 ############
+
+if(!file.exists("results/table9_full.tex")){
+
+	# TYPE I and TYPE II error rate at .01
+
+	writeComparisonTable(relationshipData,variables=c("TypeI01","TypeII01"),file="table9",analysisTypes=analysisTypes,labels=labels)
+
+}
+
+######## TABLE 10 ############
+
+if(TRUE | !file.exists("results/table10_full.tex")){
+
+	dependents<-c("deltaR2","sdByData","correlationBias","correlationError","regressionARE","regressionSE","TypeI05","TypeI01","TypeII05","TypeII01")
 	
 	allVars<-c("analysis","designNumber",dependents)
 	
@@ -265,7 +338,7 @@ if( !file.exists("results/table8_full.tex")){
 	
 	tempdata<-merge(tempdata,aggregate(relationshipData[,intersect(names(relationshipData),allVars)], by=list(relationshipData$designNumber,relationshipData$analysis),  FUN=mean, na.rm=TRUE))
 
-	tempdata<-reshape(tempdata,v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
+	tempdata<-reshape(tempdata,v.names=dependents,idvar="designNumber",timevar="analysis",direction="wide")
 
 	#Order the data bu design number
 
@@ -275,6 +348,7 @@ if( !file.exists("results/table8_full.tex")){
 	tempdata2<-data.frame(tempdata[,"designNumber"])
 	
 	for(i in 1:length(dependents)){
+		
 		tempdata2[,dependents[i]]<-tempdata[,paste(dependents[i],4,sep=".")]==apply(tempdata[,paste(dependents[i],1:4,sep=".")],1,min)
 	}
 
@@ -287,7 +361,8 @@ if( !file.exists("results/table8_full.tex")){
 	for(i in 1:length(dependents)){
 		resultCol<-NULL
 		temp<-designMatrix[tempdata2[,dependents[i]]==TRUE,]
-		for(i in 1:ncol(temp)){
+		# Last column is the design number
+		for(i in 1:(ncol(temp)-1)){
 			for(k in 1:3){
 				resultCol<-c(resultCol,sum(temp[,i]==k)/243)
 			}
@@ -297,7 +372,8 @@ if( !file.exists("results/table8_full.tex")){
 	}
 	
 	#Add row names 
-	rownames=c(numberOfConstructs,expectedNumberOfOutgoingPaths,paste(populationPathValues),paste(omittedPathsShare*100,"%",sep=""),extraPaths,sampleSizes,indicatorCounts,factorLoadings,factorLoadingIntervals,maxErrorCorrelations,methodVariances)
+	rownames<-
+	c(numberOfConstructs,expectedNumberOfOutgoingPaths,paste(populationPathValues),paste(omittedPathsShare*100,"%",sep=""),extraPaths,sampleSizes,indicatorCounts,factorLoadings,factorLoadingIntervals,maxErrorCorrelations,methodVariances)
 	
 	tableData<-data.frame(rownames,resultTable)
 	print(resultTable)
@@ -310,12 +386,14 @@ if( !file.exists("results/table8_full.tex")){
 
 	}
 	
-	file="table8"
+	file="table10"
 	add.to.row=list(as.list(pos),command)
 	print(xtable(tableData,digits=3),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row)
 	print(xtable(tableData,digits=3),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
 hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row)
 }
+
+
 
 ######## TABLES 9 ############
 
@@ -413,89 +491,8 @@ if(!file.exists("results/figure6.pdf")){
 	}
 	dev.off()
 }
-if(!file.exists("results/figure7.pdf")){
-	
-	# Do a distribution plot for p-value when there is no effect
-	# Also there must be only one incoming or outgoing path.
-	
-	#pdf(file="results/figure6.pdf")
-	
-	#Choose the construct where there is only one path to other construct
-	tempConstructs<-cbind(constructData[constructData$incomingPathsExtra+constructData$incomingPathsCorrect+constructData$outgoingPathsExtra+constructData$outgoingPathsCorrect==1,c("construct","replication","designNumber","incomingPathsExtra","incomingPathsCorrect","outgoingPathsExtra","outgoingPathsCorrect")],TRUE)
-	
-	
-	#Only use data where the relationship is very close to zero
-	dataSample<-relationshipData[abs(relationshipData$trueCorrelation)<.01,]
-	
-	tempMatrix<-data.frame(designNumber=1:729,designMatrix)
-	
-	useDesigns<-tempMatrix[tempMatrix$methodVariance==1,]$designNumber
 
-	# Only use data without method variance
-	
-	dataSample<-dataSample[dataSample$designNumber %in% useDesigns,]
-	
-	# Remove NAs
-	dataSample<-dataSample[!is.na(dataSample$p),]
 
-	dataSample<-merge(dataSample,tempConstructs,by.y=c("construct","replication","designNumber"),by.x=c("to","replication","designNumber"),all.x=TRUE)
-	dataSample<-merge(dataSample,tempConstructs,by.y=c("construct","replication","designNumber"),by.x=c("from","replication","designNumber"),all.x=TRUE)
-	
-	dataSample<-dataSample[dataSample$TRUE.x==TRUE | dataSample$TRUE.y==TRUE,]
-	
-	print(names(dataSample))
-	print(dataSample[1:100,c("trueCorrelation","regressionEstimate","regressionSE","t","p","incomingPathsExtra.x","incomingPathsCorrect.x","outgoingPathsExtra.x","outgoingPathsCorrect.x","incomingPathsExtra.y","incomingPathsCorrect.y","outgoingPathsExtra.y","outgoingPathsCorrect.y")],digits=3)
-
-	stop("debug")
-
-	par(mfrow=c(2,2)) 
-	
-	for(i in 1:length(analysisTypes)){
-
-		tempData <- as.vector(dataSample[dataSample$analysis==i,"p"])
-		tempData <- tempData[order(tempData)]
-		
-		x<-((1:length(tempData)))/(length(tempData))
-
-		plot(x,tempData,xlab="Cumulative propability",ylab="Estimated value",main=labels[[analysisTypes[i]]],log="xy")
-		abline(0,1)
-
-	}
-	#dev.off()
-}
-if(FALSE){
-	CorretModelsWithoutMethodVariance<-relationshipData[relationshipData$designNumber %in% which((designMatrix[,4]==1) & (designMatrix[,5]==1) & (designMatrix[,11]==1)&(designMatrix[,6]==2)),]
-	
-	# Do four of distribution plots
-	
-	#pdf(file="results/figure1.pdf")
-	
-	limits<-c(.1,.25,.4)
-	
-	par(mfrow=c(length(analysisTypes),length(limits)+1)) 
-	
-	for(j in 1:(length(limits)+1)){
-		# Rows
-		dataSample<-CorretModelsWithoutMethodVariance
-		if(j<=length(limits)){
-			dataSample<-dataSample[abs(dataSample$regressionTrueScore)<=limits[j],]
-		}
-		if(j>1){
-			dataSample<-dataSample[abs(dataSample$regressionTrueScore)>limits[j-1],]
-		}
-		# Columns
-		for(i in 1:length(analysisTypes)){
-			d <- density((dataSample$regressionTrueScore-dataSample$regressionEstimate)[dataSample$analysis==i],na.rm=TRUE)
-			plot(d)
-		}
-	}
-	#dev.off()
-}
-
-#
-# PRAGMATIC PART: TYPE I AND TYPE II ERROR RATE
-#
-#
 
 
 

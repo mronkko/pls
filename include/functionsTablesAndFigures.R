@@ -42,18 +42,21 @@ writeComparisonTable <- function(data,variables,file,analysisTypes,labels){
 
 	tempdata<-data[,c("designNumber","analysis",variables)]
 	tempdata<-aggregate(tempdata, by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE)
-
-
+	
 	comparisonData<-reshape(tempdata[,c("designNumber","analysis",variables)],v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
 	
 		
 	for(i in 1:length(analysisTypes)){
 		tableRow=data.frame(rownames=labels[[analysisTypes[i]]])
-		thisData<-data[data$analysis==i,]
 		for(j in 1:length(variables)){
 			
 			varname<-variables[j]
-			tableRow<-cbind(tableRow,t(quantile(thisData[,varname],probs=c(0.05,0.5,0.95),na.rm=TRUE)))
+			
+			print(paste(varname,i,sep="."))
+			print(summary(comparisonData))
+			print(comparisonData[,paste(varname,i,sep=".")])
+			tableRow<-cbind(tableRow,t(quantile(comparisonData[,paste(varname,i,sep=".")],probs=c(0.05,0.5,0.95),na.rm=TRUE)))
+		
 
 			# Calculate how often this analysis results in larger results than every other analysis
 

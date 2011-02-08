@@ -37,6 +37,18 @@
 \caption{Comparison of parameter estimates with PLS, summed scales, and  SEM}
 \end{figure}
 
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1\textwidth]{figure5}
+\caption{Estimated R2 over true R2}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1\textwidth]{figure6}
+\caption{Cumulative probability of estimated p-values}
+\end{figure}
+
 %
 % Tables
 %
@@ -182,16 +194,51 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 
 \begin{table}[ht]
 \begin{center}
-\caption{Proportions of conditions where PLS was estimated had the smallest mean value of a statistic}
-\begin{tabular}{lrrrrrr}
+\caption{Type I and Type II error rate at p$<$=.05}
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+&\multicolumn{5}{c}{Type I rate}&\multicolumn{5}{c}{Type II rate} \\
+\cmidrule(l{.75em}){2-6}\cmidrule(l{.75em}){7-11}
+\multicolumn{1}{c}{Analysis}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L} \\
+\midrule
+\input{table8_body.tex}
+\bottomrule
+\multicolumn{11}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
+\multicolumn{11}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\begin{center}
+\caption{Type I and Type II error rate at p$<$=.01}
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+&\multicolumn{5}{c}{Type I rate}&\multicolumn{5}{c}{Type II rate} \\
+\cmidrule(l{.75em}){2-6}\cmidrule(l{.75em}){7-11}
+\multicolumn{1}{c}{Analysis}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L}&\multicolumn{1}{c}{5\%}&\multicolumn{1}{c}{50\%}&\multicolumn{1}{c}{95\%}&\multicolumn{1}{c}{H}&\multicolumn{1}{c}{L} \\
+\midrule
+\input{table9_body.tex}
+\bottomrule
+\multicolumn{11}{l}{\footnotesize{Distribution of statistics over all designs and replications}} \\
+\multicolumn{11}{l}{\footnotesize{H/L = count of designs where the mean statistic for this analysis was higher/lower than others}} \\
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\begin{table}[ht]
+\begin{center}
+\caption{Proportions of conditions where PLS had the best mean value of a statistic}
+\begin{tabular}{lrrrrrrrrrr}
  \toprule
-&\multicolumn{2}{c}{Constructs}&\multicolumn{2}{c}{Correlations}&\multicolumn{2}{c}{Regressions}\\
-\cmidrule(l{.75em}){2-3}\cmidrule(l{.75em}){4-5}\cmidrule(l{.75em}){6-7}
-&\multicolumn{1}{c}{Bias}&\multicolumn{1}{c}{SD over}&\multicolumn{1}{c}{Bias}&\multicolumn{1}{c}{Error}&\multicolumn{1}{c}{ARE}&\multicolumn{1}{c}{SE}\\
+&\multicolumn{2}{c}{Constructs}&\multicolumn{2}{c}{Correlations}&\multicolumn{2}{c}{Regressions}&\multicolumn{2}{c}{Type I error}&\multicolumn{2}{c}{Type II error}\\
+\cmidrule(l{.75em}){2-3}\cmidrule(l{.75em}){4-5}\cmidrule(l{.75em}){6-7}\cmidrule(l{.75em}){8-9}\cmidrule(l{.75em}){10-11}
+&\multicolumn{1}{c}{Bias}&\multicolumn{1}{c}{SD over}&\multicolumn{1}{c}{Bias}&\multicolumn{1}{c}{Error}&\multicolumn{1}{c}{ARE}&\multicolumn{1}{c}{SE}&\multicolumn{1}{c}{p$<$=.05}&\multicolumn{1}{c}{p$<$=.01}&\multicolumn{1}{c}{p$<$=.05}&\multicolumn{1}{c}{p$<$=.01}\\
 &&\multicolumn{1}{c}{data}\\
 \midrule
 %See http://newsgroups.derkeiler.com/Archive/Comp/comp.text.tex/2008-11/msg00090.html
-\csname @@input\endcsname table8_body.tex
+\csname @@input\endcsname table10_body.tex
 \bottomrule
 \end{tabular}
 \end{center}
