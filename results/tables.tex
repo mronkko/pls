@@ -182,8 +182,18 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 
 \begin{table}[ht]
 \begin{center}
-\caption{Rare events logistic regression}
-\input{table8_full.tex}
+\caption{Proportions of conditions where PLS was estimated had the smallest mean value of a statistic}
+\begin{tabular}{lrrrrrr}
+ \toprule
+&\multicolumn{2}{c}{Constructs}&\multicolumn{2}{c}{Correlations}&\multicolumn{2}{c}{Regressions}\\
+\cmidrule(l{.75em}){2-3}\cmidrule(l{.75em}){4-5}\cmidrule(l{.75em}){6-7}
+&\multicolumn{1}{c}{Bias}&\multicolumn{1}{c}{SD over}&\multicolumn{1}{c}{Bias}&\multicolumn{1}{c}{Error}&\multicolumn{1}{c}{ARE}&\multicolumn{1}{c}{SE}\\
+&&\multicolumn{1}{c}{data}\\
+\midrule
+%See http://newsgroups.derkeiler.com/Archive/Comp/comp.text.tex/2008-11/msg00090.html
+\csname @@input\endcsname table8_body.tex
+\bottomrule
+\end{tabular}
 \end{center}
 \end{table}
 

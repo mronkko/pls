@@ -133,6 +133,13 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# After this we will analyze and report all data. 
 	#
 	
+	#
+	# TODO: Calculate Harman's single factor test and store the smallest positive correlation
+	# as indicators of method variance
+	# TODO: Store SRMR calculated with the construct true scores and the the estimated construct
+	# scores.
+	# TODO: 
+	#
 	# Initialize some variables that we will use in all reporting
 
 	correctModel<- ! (is.na(populationModel$paths) | populationModel$paths==0)

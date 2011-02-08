@@ -19,8 +19,28 @@ source("include/functionsTablesAndFigures.R")
 
 # Define labels for variables
 
-labels<-list(CR="CR",AVE="Root AVE",minFactorLoading="Minumum factor loading",meanFactorLoading="Mean factor loading",
-	maxCrossLoading="Maximum cross loading",AVEMinusMaxCorrelation="Root AVE - max correlation",sumscale="Summed scales",component="Components",factor="Factors",pls="PLS")
+labels<-list(
+	CR="CR",
+	AVE="Root AVE",
+	minFactorLoading="Minumum factor loading",
+	meanFactorLoading="Mean factor loading",
+	maxCrossLoading="Maximum cross loading",
+	AVEMinusMaxCorrelation="Root AVE - max correlation",
+	sumscale="Summed scales",
+	component="Components",
+	factor="Factors",
+	pls="PLS",
+	numberOfConstructs="Number of constructs",
+	expectedNumberOfOutgoingPaths="Expected number of paths",
+	populationPathValues="Population path values",
+	omittedPathsShare="Omitted paths",
+	extraPaths="Extra paths",
+	sampleSize="Sample size",
+	indicatorCount="Indicators",
+	factorLoading="Meand factor loading",
+	factorLoadingInterval="Factor loading variation",
+	maxErrorCorrelation="Max error correlations",
+	methodVariance="Method variances")
 
 designMatrix<-createdesignMatrix()
 
@@ -149,15 +169,15 @@ if( ! exists("constructData")){
 		print(paste("Analysis:",analysisTypes[i]," share of negative truescore correlations ",negatives,"/",count,"=",negatives/count))
 	}
 	
-	tempData$trueScoreCorrelation<-abs(tempData$trueScoreCorrelation)
-	tempData$minFactorLoading<-abs(tempData$minFactorLoading)
-	tempData$meanFactorLoading<-abs(tempData$meanFactorLoading)
-	tempData$maxCrossLoading<-abs(tempData$maxCrossLoading)
+	constructData$trueScoreCorrelation<-abs(constructData$trueScoreCorrelation)
+	constructData$minFactorLoading<-abs(constructData$minFactorLoading)
+	constructData$meanFactorLoading<-abs(constructData$meanFactorLoading)
+	constructData$maxCrossLoading<-abs(constructData$maxCrossLoading)
 
 	# We typically examine the square root of AVE
 
-	tempData$AVE<-sqrt(tempData$AVE)
-	tempData$AVEMinusMaxCorrelation<-tempData$AVE-tempData$maxCorrelationWithOtherConstruct
+	constructData$AVE<-sqrt(constructData$AVE)
+	constructData$AVEMinusMaxCorrelation<-constructData$AVE-constructData$maxCorrelationWithOtherConstruct
 
 }
 
@@ -200,6 +220,13 @@ if( ! exists("relationshipData")){
 
 	relationshipData$correlationBias<-relationshipData$estimatedCorrelation-relationshipData$trueCorrelation*relationshipData$correlationAttenuationCoefficient
 	relationshipData$correlationError<-abs(relationshipData$estimatedCorrelation-relationshipData$trueCorrelation)
+
+	tempMatrix<-data.frame(designNumber=1:729,designMatrix)
+	relationshipData<-merge(relationshipData,tempMatrix[,c("designNumber","sampleSize")])
+	
+	relationshipData$sampleSize<-sampleSizes[relationshipData$sampleSize]
+	relationshipData$t<-relationshipData$regressionEstimate/relationshipData$regressionSE
+	relationshipData$p<-(1-pt(abs(relationshipData$t),relationshipData$sampleSize-1))*2
 }
 
 
@@ -226,13 +253,13 @@ if(!file.exists("results/table7_full.tex")){
 
 ######## TABLE 8 ############
 
-if(!file.exists("results/table8_full.tex")){
+if( !file.exists("results/table8_full.tex")){
 
 	dependents<-c("deltaR2","sdByData","correlationBias","correlationError","regressionARE","regressionSE")
 	
 	allVars<-c("analysis","designNumber",dependents)
 	
-	# Rare events logistic regression on when PLS is better than others.
+	# Crosstabulate 
 	
 	tempdata<-aggregate(constructData[,intersect(names(constructData),allVars)], by=list(constructData$designNumber,constructData$analysis),  FUN=mean, na.rm=TRUE)
 	
@@ -251,34 +278,75 @@ if(!file.exists("results/table8_full.tex")){
 		tempdata2[,dependents[i]]<-tempdata[,paste(dependents[i],4,sep=".")]==apply(tempdata[,paste(dependents[i],1:4,sep=".")],1,min)
 	}
 
-	#Merge the design numbers
+	# Merge the design numbers
 	
-	tempdata2<-cbind(tempdata2,designMatrix)
 
-	relogit<-list()
+	# Loop over dependents and generate vectors of frequencies
+	
+	resultTable<-NULL
 	for(i in 1:length(dependents)){
-		
-		relogit[[length(relogit)+1]]<-zelig(as.formula(paste(dependents[i],"~",paste(colnames(designMatrix),collapse=" + "))), model="relogit",data=tempdata2,tau=c(mean(tempdata2[,dependents[i]])))
-		
-		# TODO: relogit postestimation
+		resultCol<-NULL
+		temp<-designMatrix[tempdata2[,dependents[i]]==TRUE,]
+		for(i in 1:ncol(temp)){
+			for(k in 1:3){
+				resultCol<-c(resultCol,sum(temp[,i]==k)/243)
+			}
+		}
+		resultTable<-cbind(resultTable,matrix(resultCol,ncol=1))
 		
 	}
-	#Very cumbersome, but works.
-	for(i in 1:6) assign(paste("m",i,sep=""),relogit[[i]])
-	write(format(mtable(m1,m2,m3,m4,m5,m6),forLaTeX=TRUE),file="results/table8_full.tex")
+	
+	#Add row names 
+	rownames=c(numberOfConstructs,expectedNumberOfOutgoingPaths,paste(populationPathValues),paste(omittedPathsShare*100,"%",sep=""),extraPaths,sampleSizes,indicatorCounts,factorLoadings,factorLoadingIntervals,maxErrorCorrelations,methodVariances)
+	
+	tableData<-data.frame(rownames,resultTable)
+	print(resultTable)
+
+	command<-NULL
+	pos<-NULL
+	for(i in 1:ncol(designMatrix)){
+		pos=c(pos,(i-1)*3)
+		command=c(command,paste("\\multicolumn{",length(dependents)+1,"}{l}{",labels[[colnames(designMatrix)[i]]],"}\\\\"))
+
+	}
+	
+	file="table8"
+	add.to.row=list(as.list(pos),command)
+	print(xtable(tableData,digits=3),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row)
+	print(xtable(tableData,digits=3),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
+hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row)
 }
 
-######## TABLE 9 ############
+######## TABLES 9 ############
 
 if(FALSE & !file.exists("results/table9_full.tex")){
 
-	# Regression on all quality measures. Not grouped by experimental 
-	# conditions. This results in a huge regression table
+	# Correlation table where conditions are on columns and all construct related things are on rows
 	
-	# Precision and accuracy
-	tempData<-relationshipData[,c("replication","designNumber","to","from","analysis","correlationAttenuationCoefficient","regressionTrueScore","regressionEstimate","regressionSE")]
-	tempData$regressionARE<-abs(tempData$regressionTrueScore-tempData$regressionEstimate)
-	writeComparisonTable(tempData,variables=c("regressionARE","regressionSE"),file="table9",analysisTypes=analysisTypes,labels=labels)
+}
+
+######## TABLES 10 ############
+
+if(FALSE & !file.exists("results/table10_full.tex")){
+	# Two-level regression table where all construct related things are 
+	# dependents and all model related things are on the second level and 
+	# all construct related things on the first level
+
+}
+
+######## TABLES 11 ############
+
+if(FALSE & !file.exists("results/table11_full.tex")){
+	# Correlation table where all relationship related things are included
+}
+
+######## TABLES 12 ############
+
+if(FALSE & !file.exists("results/table12_full.tex")){
+	# Two-level regression table where all construct related things are 
+	# dependents and all model related things are on the second level and 
+	# all construct related things on the first level
+
 }
 
 ####### DISTRIBUTION PLOTS ########
@@ -288,11 +356,117 @@ if(FALSE & !file.exists("results/table9_full.tex")){
 # include correctly specified models. Only data with 100 observations
 #
 
+if(!file.exists("results/figure5.pdf")){
+	
+	# Do four of distribution plots
+	
+	pdf(file="results/figure5.pdf")
+	
+	
+	par(mfrow=c(2,2)) 
+	
+	dataSample<-constructData
+	for(i in 1:length(analysisTypes)){
 
+		tempData <- dataSample[dataSample$analysis==i,]
+
+		plot(tempData$trueR2,tempData$estimatedR2,xlab="Real R2",ylab="Estimated R2",main=labels[[analysisTypes[i]]])
+		abline(0, 1)
+
+	}
+	dev.off()
+}
+
+if(!file.exists("results/figure6.pdf")){
+	
+	# Do a distribution plot for p-value when there is no effect
+	
+	pdf(file="results/figure6.pdf")
+	
+	
+	par(mfrow=c(2,2)) 
+	
+	#Only use data where the relationship is very close to zero
+	dataSample<-relationshipData[abs(relationshipData$trueCorrelation)<.01,]
+	
+	tempMatrix<-data.frame(designNumber=1:729,designMatrix)
+	
+	useDesigns<-tempMatrix[tempMatrix$methodVariance==1,]$designNumber
+
+	# Only use data without method variance
+	
+	dataSample<-dataSample[dataSample$designNumber %in% useDesigns,]
+	
+	# Remove NAs
+	dataSample<-dataSample[!is.na(dataSample$p),]
+	
+	for(i in 1:length(analysisTypes)){
+
+		tempData <- as.vector(dataSample[dataSample$analysis==i,"p"])
+		tempData <- tempData[order(tempData)]
+		
+		x<-((1:length(tempData)))/(length(tempData))
+
+		plot(x,tempData,xlab="Cumulative propability",ylab="Estimated value",main=labels[[analysisTypes[i]]],log="xy")
+		abline(0,1)
+
+	}
+	dev.off()
+}
+if(!file.exists("results/figure7.pdf")){
+	
+	# Do a distribution plot for p-value when there is no effect
+	# Also there must be only one incoming or outgoing path.
+	
+	#pdf(file="results/figure6.pdf")
+	
+	#Choose the construct where there is only one path to other construct
+	tempConstructs<-cbind(constructData[constructData$incomingPathsExtra+constructData$incomingPathsCorrect+constructData$outgoingPathsExtra+constructData$outgoingPathsCorrect==1,c("construct","replication","designNumber","incomingPathsExtra","incomingPathsCorrect","outgoingPathsExtra","outgoingPathsCorrect")],TRUE)
+	
+	
+	#Only use data where the relationship is very close to zero
+	dataSample<-relationshipData[abs(relationshipData$trueCorrelation)<.01,]
+	
+	tempMatrix<-data.frame(designNumber=1:729,designMatrix)
+	
+	useDesigns<-tempMatrix[tempMatrix$methodVariance==1,]$designNumber
+
+	# Only use data without method variance
+	
+	dataSample<-dataSample[dataSample$designNumber %in% useDesigns,]
+	
+	# Remove NAs
+	dataSample<-dataSample[!is.na(dataSample$p),]
+
+	dataSample<-merge(dataSample,tempConstructs,by.y=c("construct","replication","designNumber"),by.x=c("to","replication","designNumber"),all.x=TRUE)
+	dataSample<-merge(dataSample,tempConstructs,by.y=c("construct","replication","designNumber"),by.x=c("from","replication","designNumber"),all.x=TRUE)
+	
+	dataSample<-dataSample[dataSample$TRUE.x==TRUE | dataSample$TRUE.y==TRUE,]
+	
+	print(names(dataSample))
+	print(dataSample[1:100,c("trueCorrelation","regressionEstimate","regressionSE","t","p","incomingPathsExtra.x","incomingPathsCorrect.x","outgoingPathsExtra.x","outgoingPathsCorrect.x","incomingPathsExtra.y","incomingPathsCorrect.y","outgoingPathsExtra.y","outgoingPathsCorrect.y")],digits=3)
+
+	stop("debug")
+
+	par(mfrow=c(2,2)) 
+	
+	for(i in 1:length(analysisTypes)){
+
+		tempData <- as.vector(dataSample[dataSample$analysis==i,"p"])
+		tempData <- tempData[order(tempData)]
+		
+		x<-((1:length(tempData)))/(length(tempData))
+
+		plot(x,tempData,xlab="Cumulative propability",ylab="Estimated value",main=labels[[analysisTypes[i]]],log="xy")
+		abline(0,1)
+
+	}
+	#dev.off()
+}
 if(FALSE){
 	CorretModelsWithoutMethodVariance<-relationshipData[relationshipData$designNumber %in% which((designMatrix[,4]==1) & (designMatrix[,5]==1) & (designMatrix[,11]==1)&(designMatrix[,6]==2)),]
 	
-	# Do a four by four matrix of distribution plots
+	# Do four of distribution plots
 	
 	#pdf(file="results/figure1.pdf")
 	
