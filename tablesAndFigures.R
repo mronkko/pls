@@ -8,7 +8,7 @@ library(plspm)
 library(lattice)
 library(lavaan)
 library(car)
-library(lme4)
+library(foreign)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -180,14 +180,7 @@ if( ! exists("constructData")){
 	constructData$AVE<-sqrt(constructData$AVE)
 	constructData$AVEMinusMaxCorrelation<-constructData$AVE-constructData$maxCorrelationWithOtherConstruct
 	
-	print("Start merging design data to constructs")
-	print(object.size(constructData),units="Mb")
-	print(object.size(designMatrix),units="Mb")
 
-	# Merge design related things
-	constructData<-merge(constructData,designMatrix,by="designNumber")
-
-	print("Done merging design data to constructs")
 
 }
 
@@ -252,34 +245,16 @@ if( ! exists("relationshipData")){
 
 	relationshipData$TypeII01<-relationshipData$p>.01 & relationshipData$regressionTrueScore == 0
 
-	# Merge construct related stuff. These are suffixed as to and from. Do not 
-	# merge design related things at this point
-	temp<-constructData[,c("designNumber",setdiff(names(constructData),names(designMatrix)))]
+	# This is not strictly speaking the right way to determine if a path is 
+	# speficied because also non-convergent analyses result in NA estimates. 
+	# A more approriate way would be to read the tested model from MapReduce 
+	# input data or to test if the estimate is NA for all analysis types.
 	
-	print("Start merging construct data to relationships")
-	
-	print(object.size(constructData),units="Mb")
-	print(object.size(designMatrix),units="Mb")
-	print(object.size(relationshipData),units="Mb")
-	print(object.size(temp),units="Mb")
 
-	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"))
-
-	print("Part one of merging construct data to relationships done")
+	relationshipData$specifiedAsPath<-!is.na(relationshipData$regressionEstimate)
 	
-	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"),suffixes=c(".from",".to"))
-	
-	rm(temp)
-	
-	print("Done merging construct data to relationships")
 
-	print("Start merging design data to relationships")
 	
-	# Merge design related things
-	relationshipData<-merge(relationshipData,designMatrix,by="designNumber")
-
-	print("Done merging design data to relationships")
-
 }
 
 ######## TABLE 6 ############
@@ -326,7 +301,7 @@ if(!file.exists("results/table9_full.tex")){
 
 ######## TABLE 10 ############
 
-if(TRUE | !file.exists("results/table10_full.tex")){
+if(!file.exists("results/table10_full.tex")){
 
 	dependents<-c("deltaR2","sdByData","correlationBias","correlationError","regressionARE","regressionSE","TypeI05","TypeI01","TypeII05","TypeII01")
 	
@@ -395,36 +370,92 @@ hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row
 
 
 
-######## TABLES 9 ############
-
-if(FALSE & !file.exists("results/table9_full.tex")){
-
-	# Correlation table where conditions are on columns and all construct related things are on rows
-	
-}
-
-######## TABLES 10 ############
-
-if(FALSE & !file.exists("results/table10_full.tex")){
-	# Two-level regression table where all construct related things are 
-	# dependents and all model related things are on the second level and 
-	# all construct related things on the first level
-
-}
-
 ######## TABLES 11 ############
 
-if(FALSE & !file.exists("results/table11_full.tex")){
-	# Correlation table where all relationship related things are included
-}
+if(!file.exists("results/table11_full.tex")){
 
-######## TABLES 12 ############
 
-if(FALSE & !file.exists("results/table12_full.tex")){
-	# Two-level regression table where all construct related things are 
-	# dependents and all model related things are on the second level and 
-	# all construct related things on the first level
+	# a huge regression table
+	# DEPENDENTS
+	# Constructs: reliability, bias
+	# Correlations: attenuation, bias
+	# Regressions: ARE, SE
+	# Errors (.05): Type I  Type II
 
+	# Independents
+	# All experiment, construct, and relationship related covariates. Everything 
+	# that has been a dependent earlier in the model
+	
+	designIndependents<-c("numberOfConstructs","expectedNumberOfOutgoingPaths","populationPathValues","omittedPathsShare","extraPaths","sampleSize","indicatorCount","factorLoading","factorLoadingInterval","maxErrorCorrelation","methodVariance")
+	
+	constructDependents<-c("trueScoreCorrelation","deltaR2")
+	constructIndependents<-c("minFactorLoading","meanFactorLoading","maxCrossLoading","trueR2","incomingPathsCorrect","incomingPathsExtra","incomingPathsOmitted","outgoingPathsCorrect","outgoingPathsExtra","outgoingPathsOmitted")
+	
+	correlationDependents<-c("correlationAttenuationCoefficient","correlationBias")
+	
+	correlationIndependents<-c("trueCorrelation","specifiedAsPath")
+	
+	regressionDependents<-c("regressionARE","regressionSE")
+	
+	regressionIndependents<-c("regressionTrueScore")
+	
+	errorDependents<-c("TypeI05","TypeII05")
+	
+	# Create two new datasets 
+	
+	
+	constructsForRegression<-constructData[constructData$analysis==4,c("designNumber","replication","construct",constructIndependents)]
+
+	temp<-aggregate(constructData[,c("designNumber","replication","construct",constructDependents)], by=list(constructData[,"designNumber"],constructData[,"replication"],constructData[,"construct"]),  FUN=mean, na.rm=TRUE)
+	
+	temp<-merge(temp,constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"))
+	
+	temp[,constructDependents]<-temp[,paste(constructDependents,"x",sep=".")]-temp[,paste(constructDependents,"y",sep=".")]
+	
+	# The dependent is the difference between PLS estimate and mean of all estimates.
+	constructsForRegression<-merge(constructsForRegression,temp[,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"))
+
+	rm(temp)
+	
+	# Merge design related things
+	constructsForRegression<-merge(constructsForRegression,designMatrix,by="designNumber")
+
+	# Export the model so that we can run it in Stata, which has better 
+	# multilevel capabilities. 
+	
+	write.foreign(constructsForRegression,"constructData.data","constructData.codes",package="Stata")
+	stop("stop")
+
+	
+	print("Start merging construct data to relationships")
+
+	# Merge construct related stuff. These are suffixed as to and from. Do not 
+	# merge design related things at this point
+	temp<-constructData[,c("designNumber",setdiff(names(constructData),names(designMatrix)))]
+	
+	print(object.size(constructData),units="Mb")
+	print(object.size(designMatrix),units="Mb")
+	print(object.size(relationshipData),units="Mb")
+	print(object.size(temp),units="Mb")
+
+	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"))
+
+	print("Part one of merging construct data to relationships done")
+	
+	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"),suffixes=c(".from",".to"))
+	
+	rm(temp)
+	
+	print("Done merging construct data to relationships")
+
+	print("Start merging design data to relationships")
+	
+	# Merge design related things
+	relationshipData<-merge(relationshipData,designMatrix,by="designNumber")
+
+	print("Done merging design data to relationships")
+	
+	
 }
 
 ####### DISTRIBUTION PLOTS ########
@@ -493,9 +524,56 @@ if(!file.exists("results/figure6.pdf")){
 }
 
 
+#
+# Do a similar plot as the previous except that we check if the how many 
+# estimated standard errors there are between the true value and the estimate
+# and what is the probablity of getting the same from drawing from the
+# t-distribution.
+#
 
+#
+# TODO: Make this a QQ plot
+#
 
+# There is something wrong with this figure. 
 
+if(FALSE & !file.exists("results/figure7.pdf")){
+	
+	# Do a distribution plot for p-value when there is no effect
+	
+	#pdf(file="results/figure7.pdf")
+	
+	
+	par(mfrow=c(2,2)) 
+	
+	useDesigns<-designMatrix[designMatrix[,"populationPathValues"]==3 & designMatrix[,"methodVariance"]==1 ,"designNumber"]
+	
+	# Only use data without method variance and the design with null effects
+	dataSample<-relationshipData[relationshipData$designNumber %in% useDesigns,c("regressionEstimate","regressionTrueScore","regressionSE","analysis")]
+	
+	print(summary(dataSample))
+	
+
+	# Calculate how many standard errors the true score is from the estimated score
+	dataSample$stat=(dataSample$regressionEstimate-dataSample$regressionTrueScore)/dataSample$regressionSE
+	
+	#Reverse cases where the regressionTrueScore is smaller than zero
+	dataSample$stat<-dataSample$stat*abs(dataSample$regressionTrueScore)/dataSample$regressionTrueScore
+	
+	
+	print(summary(dataSample))
+	
+	x <- seq(-1, 1, length=100)
+	
+	for(i in 1:length(analysisTypes)){
+
+		tempData <- as.vector(dataSample[dataSample$analysis==i,"regressionEstimate"])
+		
+		plot(density(tempData,na.rm=TRUE),main=labels[[analysisTypes[i]]])
+		lines(x, dt(x,100),col="lightgray")
+	}
+	#dev.off()
+}
 
 
 
