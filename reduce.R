@@ -138,7 +138,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# as indicators of method variance
 	# TODO: Store SRMR calculated with the construct true scores and the the estimated construct
 	# scores.
-	# TODO: 
 	#
 	# Initialize some variables that we will use in all reporting
 
@@ -190,22 +189,91 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			}
 		}
 		for(designNumber in startIndex:endIndex){
-
-			#
-			# Construct level statistics first
-			#
+		
 			
 			thisdesignRow<-designMatrix[designNumber,]
+	
+			testedModel<-testedModels[[thisDesignRow[5]]]
+
 			thisResults<-results[[toString(designNumber)]][[analysis]]
 
 			# If the analysis did not converge, do not write anything
 			
 			if(! is.na(thisResults)){
-				thisCorrelations <-cor(cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators))
 	
 				indicatorCount<-indicatorCounts[thisDesignRow[7]]
+
+				#
+				# Model and data level things: method variance analysis and model level fit indices
+				#
+			
+		
+				thisCorrelations <-cor(cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators))
+
+				# Variance explained by first common factor
+				fact<-factanal(data[[thisDesignRow[7]]]$indicators,factors =1)
+				varianceExplainedCommonFactor<-colSums(fact$loading*fact$loading)/dim(fact$loading)[1]
+				
+				# Smallest and second smallest positive correlation among items
+				
+				positiveCorrelations<-cor(data[[thisDesignRow[7]]]$indicators)
+				positiveCorrelations<-positiveCorrelations[positiveCorrelations>0]
+				smallestPositiveCorrelation<-min(positiveCorrelations)
+				secondSmallestPositiveCorrelation<-min(positiveCorrelations[positiveCorrelations>smallestPositiveCorrelation])
+				
+				#
+				# SRMR
+				#
+				
+				residuals<-data.frame()
+				constructIndicatorCorrelations<-NULL
+				
+				for(construct in 1:constructCount){
+					for(indicator in 1:indicatorCount){
+						residuals<-cbind(lm(as.formula(paste("i",(construct-1)*indicatorCount+
+							indicator," ~ C",construct,sep="")),data=cbind(thisResults$constructs,
+							data[[thisDesignRow[7]]]$indicators))$residuals)
+						constructIndicatorCorrelations<-c(constructIndicatorCorrelations,
+							cor(thisResults$constructs[,construct],
+							data[[thisDesignRow[7]]]$indicators[,indicator]))
+					}
+				}
+				
+				residualCorrelationMatrix <- cov(residuals)
+				diag(residualCorrelationMatrix)<-0
+				SRMR<-mean(residualCorrelationMatrix^2)
+				
+				# Mean square residuals
+				
+				meanSquareResiduals<-mean(residuals^2)
+				
+				#
+				# Goodness of fit indices
+				# 
+				
+				# Global GoF is the product of mean square correlation between indicators and constructs
+				# multiplied by mean R2 of the constructs
 	
-				testedModel<-testedModels[[thisDesignRow[5]]]
+				R2s<-NULL
+				
+				for(construct in 1:constructCount){
+
+					# Estimated R2 for endogenous constructCount
+					indices<-c(which(testedModel[construct,]==1)+constructCount,constructCount+construct)
+					if(length(indices)>0){
+						R2s <- c(R2s,mat.regress(thisCorrelations[indices,indices],c(1:length(indices)-1),length(indices))$R2)
+					}
+				}
+				
+				GlobalGoF <- mean(R2s) * mean(constructIndicatorCorrelations^2)
+				
+				cat("M",replication,designNumber,analysis,SRMR,GlobalGoF,meanSquareResiduals,varianceExplainedCommonFactor,smallestPositiveCorrelation,secondSmallestPositiveCorrelation,sep="\t")
+				cat("\n")
+				
+				#
+				# Construct level statistics first
+				#
+
 	
 				# Which columns of thisCorrelations are indicator correlations
 				allIndicatorCols<-c((2*constructCount+1):(2*constructCount+constructCount*indicatorCount))

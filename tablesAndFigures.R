@@ -9,6 +9,7 @@ library(lattice)
 library(lavaan)
 library(car)
 library(foreign)
+library(lme4)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -374,7 +375,9 @@ hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row
 
 if(!file.exists("results/table11_full.tex")){
 
-
+	# A temporary if-statement to speed things up
+	if(FALSE){
+	
 	# a huge regression table
 	# DEPENDENTS
 	# Constructs: reliability, bias
@@ -389,9 +392,12 @@ if(!file.exists("results/table11_full.tex")){
 	designIndependents<-c("numberOfConstructs","expectedNumberOfOutgoingPaths","populationPathValues","omittedPathsShare","extraPaths","sampleSize","indicatorCount","factorLoading","factorLoadingInterval","maxErrorCorrelation","methodVariance")
 	
 	constructDependents<-c("trueScoreCorrelation","deltaR2")
-	constructIndependents<-c("minFactorLoading","meanFactorLoading","maxCrossLoading","trueR2","incomingPathsCorrect","incomingPathsExtra","incomingPathsOmitted","outgoingPathsCorrect","outgoingPathsExtra","outgoingPathsOmitted")
 	
-	correlationDependents<-c("correlationAttenuationCoefficient","correlationBias")
+	# "minFactorLoading" is dropped due to collinearity
+	# TODO: Make the populationPAthValues a categorical variable.
+	 constructIndependents<-c("meanFactorLoading","maxCrossLoading","trueR2","incomingPathsCorrect","incomingPathsExtra","incomingPathsOmitted","outgoingPathsCorrect","outgoingPathsExtra","outgoingPathsOmitted")
+	
+	correlationDependents<-c("correlationAttenuationCoefficient","correlationBias","correlationError")
 	
 	correlationIndependents<-c("trueCorrelation","specifiedAsPath")
 	
@@ -401,10 +407,15 @@ if(!file.exists("results/table11_full.tex")){
 	
 	errorDependents<-c("TypeI05","TypeII05")
 	
+	relationshipIndependents=c(correlationIndependents,regressionIndependents)
+	relationshipDependents=c(correlationDependents,regressionDependents,errorDependents)
+
 	# Create two new datasets 
-	
-	
 	constructsForRegression<-constructData[constructData$analysis==4,c("designNumber","replication","construct",constructIndependents)]
+
+	#Set TrueR2 to zero for exogenous variables
+	
+	constructsForRegression[is.na(constructsForRegression[,"trueR2"]),"trueR2"]<-0
 
 	temp<-aggregate(constructData[,c("designNumber","replication","construct",constructDependents)], by=list(constructData[,"designNumber"],constructData[,"replication"],constructData[,"construct"]),  FUN=mean, na.rm=TRUE)
 	
@@ -415,47 +426,132 @@ if(!file.exists("results/table11_full.tex")){
 	# The dependent is the difference between PLS estimate and mean of all estimates.
 	constructsForRegression<-merge(constructsForRegression,temp[,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"))
 
-	rm(temp)
+
+	relationshipsForRegression<-relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipIndependents)]
+
+	temp<-aggregate(relationshipData[,c("designNumber","replication","to","from",relationshipDependents)], by=list(relationshipData[,"designNumber"],relationshipData[,"replication"],relationshipData[,"to"],relationshipData[,"from"]),  FUN=mean, na.rm=TRUE)
+	temp<-merge(temp,relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"))
+	
+	temp[,relationshipDependents]<-temp[,paste(relationshipDependents,"x",sep=".")]-temp[,paste(relationshipDependents,"y",sep=".")]
+	
+	# The dependent is the difference between PLS estimate and mean of all estimates.
+	
+	relationshipsForRegression<-merge(relationshipsForRegression,temp[,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"))	
+	
+	relationshipsForRegression<-merge(relationshipsForRegression,constructsForRegression,by.x=c("replication","designNumber","to"),by.y=c("replication","designNumber","construct"))
+
+
+	relationshipsForRegression<-merge(relationshipsForRegression,constructsForRegression,by.x=c("replication","designNumber","from"),by.y=c("replication","designNumber","construct"),suffixes=c("",".from"))
+	
+	
 	
 	# Merge design related things
-	constructsForRegression<-merge(constructsForRegression,designMatrix,by="designNumber")
+	
+	relationshipsForRegression<-merge(relationshipsForRegression,designMatrix,by="designNumber")
+	constructsForRegression<-merge(constructsForRegression,tempDesignMatrix,by="designNumber")
 
-	# Export the model so that we can run it in Stata, which has better 
-	# multilevel capabilities. 
+	print("Done merging data for regressions")
 	
-	write.foreign(constructsForRegression,"constructData.data","constructData.codes",package="Stata")
-	stop("stop")
+	# Run regressions for construct dependents
+	
+	# We need to adjust the cosntruct names, since C1 is not the same across replications
+	
+	relationshipsForRegression$to<-relationshipsForRegression$to+12*(relationshipsForRegression$replication*729+relationshipsForRegression$designNumber)
+	
+	relationshipsForRegression$from<-relationshipsForRegression$from+12*(relationshipsForRegression$replication*729+relationshipsForRegression$designNumber)
+	
+	}
+	
+	# Recode some variables so that they make more sense in the regressions
+
+	relationshipsForRegression[,"populationPathValues"]<-factor(relationshipsForRegression[,"populationPathValues"],labels=c("[-.5,.5]","[0,.5]","[0]"))	
+	constructsForRegression[,"populationPathValues"]<-factor(constructsForRegression[,"populationPathValues"],labels=c("[-.5,.5]","[0,.5]","[0]"))
+
+	relationshipsForRegression[,"trueCorrelation"]<-abs(relationshipsForRegression[,"trueCorrelation"])
+	
+	relationshipsForRegression[,"regressionTrueScore"]<-abs(relationshipsForRegression[,"regressionTrueScore"])
+
+	modelResults<-NULL
+	
+	dependentGroups<-list(constructDependents,correlationDependents,regressionDependents,errorDependents)
+	
+	for(dependentGroup in 1:length(dependentGroups)){
+		if(dependentGroup==1){
+			data<-constructsForRegression
+		}
+		else{
+			data<-relationshipsForRegression
+		}
+		
+		tempLimit<-min(4,dependentGroup+1)
+		
+		dependents<-dependentGroups[[dependentGroup]]
+		
+		for(dependent in 1:length(dependents)){
+			for(modelIndex in 1:tempLimit){
+				print(paste(dependentGroup,dependent,modelIndex))
+				independents <- designIndependents
+				if(modelIndex>1){ 	
+					independents<-c(independents,constructIndependents)
+					if(dependentGroup>1) independents<-c(independents, paste(constructIndependents,"from",sep="."))
+				}
+				if(modelIndex>2) independents<-c(independents,correlationIndependents)
+				if(modelIndex>3) independents<-c(independents,regressionIndependents)
+				
+				# All regression and errorthings have "specifiedAsPath" as always positive, so it needs to be dropped 
+				if(dependentGroup>2){
+					independents<-setdiff(independents,"specifiedAsPath")
+				}
+				
+				strFormula<-paste(dependents[dependent]," ~ 1 + ",paste(independents, collapse=" + ",sep=" + ")," + (1| designNumber) + (1| replication)")
+
+				if(dependentGroup>1 ) strFormula<-paste(strFormula," + (1|to) + (1|from)")	
+				
+				print(strFormula)
+				reg<-lm(as.formula(gsub(" \\+ \\(.*","",strFormula)),data=data)
+				print("Normal regression")
+				print(reg)
+				print("Variance inflation factors from normal regression")
+				print(vif(reg))
+				
+				lmr<-lmer(as.formula(strFormula),data=data)
+				
+				#Remove the data frame to save memory
+				lmr@frame<-data.frame()
+				
+				modelResults<-c(modelResults,lmr)
+			}
+		}
+	}
+	
+	tableData<-combine.output.lmer(modelResults)
+
+	#Print the csv table as latex. 
+	formattedTableData<-tableData[,1]
+	
+	for(i in 1:((ncol(tableData)-2)/3)){
+		formattedTableData<-cbind(formattedTableData,format(round(as.numeric(tableData[,3*i]),digits=3),nsmall=3,scientific=FALSE,trim=TRUE,na.encode=TRUE))
+		ns<-abs(as.numeric(tableData[,3*i+2]))<qt(0.001,length(modelResults[[i]]@resid),lower.tail=FALSE)
+		ns[is.na(ns)]<-FALSE
+		formattedTableData[ns,i+1]<-paste(formattedTableData[ns,i+1],"$^{ns}$",sep="")
+	}
 
 	
-	print("Start merging construct data to relationships")
+	formattedTableData[formattedTableData=="NA"]<-NA
+	#Remove blanck lines
+	formattedTableData<-formattedTableData[!is.na(formattedTableData[1,]),]
+	
+	file<-"table11"
+	
+	print(formattedTableData)
+	
+	add.to.row<-list(list(nrow(formattedTableData)-6,nrow(formattedTableData)-7),c("\\midrule ","\\midrule "))
+	
+	print(xtable(formattedTableData),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
+	print(xtable(formattedTableData),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
+	hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
 
-	# Merge construct related stuff. These are suffixed as to and from. Do not 
-	# merge design related things at this point
-	temp<-constructData[,c("designNumber",setdiff(names(constructData),names(designMatrix)))]
-	
-	print(object.size(constructData),units="Mb")
-	print(object.size(designMatrix),units="Mb")
-	print(object.size(relationshipData),units="Mb")
-	print(object.size(temp),units="Mb")
 
-	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"))
-
-	print("Part one of merging construct data to relationships done")
-	
-	relationshipData<-merge(relationshipData,temp,by.x=c("replication","designNumber","analysis","to"),by.y=c("replication","designNumber","analysis","construct"),suffixes=c(".from",".to"))
-	
-	rm(temp)
-	
-	print("Done merging construct data to relationships")
-
-	print("Start merging design data to relationships")
-	
-	# Merge design related things
-	relationshipData<-merge(relationshipData,designMatrix,by="designNumber")
-
-	print("Done merging design data to relationships")
-	
-	
 }
 
 ####### DISTRIBUTION PLOTS ########
@@ -559,6 +655,8 @@ if(FALSE & !file.exists("results/figure7.pdf")){
 	
 	#Reverse cases where the regressionTrueScore is smaller than zero
 	dataSample$stat<-dataSample$stat*abs(dataSample$regressionTrueScore)/dataSample$regressionTrueScore
+	
+	
 	
 	
 	print(summary(dataSample))
