@@ -5,9 +5,10 @@
 
 
 # debian R upgrade (Source: http://www.r-bloggers.com/bootstrapping-the-latest-r-into-amazon-elastic-map-reduce/)
-echo "deb http://streaming.stat.iastate.edu/CRAN/bin/linux/debian lenny-cran/" | sudo tee -a /etc/apt/sources.list
-sudo apt-get update
-sudo apt-get -t lenny-cran install --yes --force-yes r-base r-base-dev
+#echo "deb http://streaming.stat.iastate.edu/CRAN/bin/linux/debian lenny-cran/" | sudo tee -a /etc/apt/sources.list
+
+sudo apt-get update 
+sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --force-yes r-recommended
 
 
 # plspm: The PLS package

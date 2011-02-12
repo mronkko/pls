@@ -15,6 +15,8 @@
 # Ensure that there is no garbage to mess things up
 rm(list = ls(all = TRUE))
 
+set.seed(Sys.time())
+ 
 # Read simulation parameters
 source("include/parameters.R")
 

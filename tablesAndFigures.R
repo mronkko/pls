@@ -157,6 +157,11 @@ B =~ b',paste(1:indicatorcount,collapse=" + b"),sep="")
 
 #Only read in this data if it is not in memory already. It takes a while to read
 
+if( ! exists("modelData")){
+	modelData <- read.delim("data/models.csv")
+	print(summary(modelData))
+}
+
 if( ! exists("constructData")){
 	constructData <- read.delim("data/constructs.csv")
 	
@@ -192,8 +197,11 @@ if( ! exists("constructData")){
 if(!file.exists("results/table3_full.tex")){
 	# General information about quality of measurement
 	
-	writeDescriptivesTable(constructData,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
-	"maxCrossLoading","AVEMinusMaxCorrelation"),file="table3",analysisTypes=analysisTypes,labels=labels)
+	constructDataPlus<-merge(constructData,modelData)
+	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
+	"maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes,labels=labels)
+	
+	rm(constructDataPlus)
 }
 
 ######## TABLE 4 ############
@@ -369,7 +377,7 @@ if(!file.exists("results/table10_full.tex")){
 hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row)
 }
 
-
+stop("DEBUGGGG")
 
 ######## TABLES 11 ############
 

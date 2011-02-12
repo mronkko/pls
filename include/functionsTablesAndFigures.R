@@ -52,9 +52,9 @@ writeComparisonTable <- function(data,variables,file,analysisTypes,labels){
 			
 			varname<-variables[j]
 			
-			print(paste(varname,i,sep="."))
-			print(summary(comparisonData))
-			print(comparisonData[,paste(varname,i,sep=".")])
+#			print(paste(varname,i,sep="."))
+#			print(summary(comparisonData))
+#			print(comparisonData[,paste(varname,i,sep=".")])
 			tableRow<-cbind(tableRow,t(quantile(comparisonData[,paste(varname,i,sep=".")],probs=c(0.05,0.5,0.95),na.rm=TRUE)))
 		
 

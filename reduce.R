@@ -210,9 +210,23 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		
 				thisCorrelations <-cor(cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators))
 
-				# Variance explained by first common factor
-				fact<-factanal(data[[thisDesignRow[7]]]$indicators,factors =1)
-				varianceExplainedCommonFactor<-colSums(fact$loading*fact$loading)/dim(fact$loading)[1]
+				# Variance explained by first common factor. It is possible that these does not converge, so capture error
+				
+				
+				fact<-NULL
+				
+				tryCatch(
+					fact<-factanal(data[[thisDesignRow[7]]]$indicators,factors =1)
+					,error = function(e){
+						debugPrint(e)
+					}
+				)
+				if(! is.null(fact)){
+					varianceExplainedCommonFactor<-colSums(fact$loading*fact$loading)/dim(fact$loading)[1]
+				}
+				else{
+					varianceExplainedCommonFactor<-NA
+				}
 				
 				# Smallest and second smallest positive correlation among items
 				
@@ -225,17 +239,21 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				# SRMR
 				#
 				
-				residuals<-data.frame()
+				residuals<-NULL
 				constructIndicatorCorrelations<-NULL
 				
 				for(construct in 1:constructCount){
 					for(indicator in 1:indicatorCount){
-						residuals<-cbind(lm(as.formula(paste("i",(construct-1)*indicatorCount+
-							indicator," ~ C",construct,sep="")),data=cbind(thisResults$constructs,
-							data[[thisDesignRow[7]]]$indicators))$residuals)
+						thisIndicator<-(construct-1)*indicatorCount+indicator
+
+						formulaStr<-paste("i",thisIndicator," ~ C",construct,sep="")
+						
+						lmfit<-lm(as.formula(formulaStr),data=cbind(thisResults$constructs,
+							data[[thisDesignRow[7]]]$indicators))
+						residuals<-cbind(residuals,matrix(lmfit$residuals,ncol=1))
 						constructIndicatorCorrelations<-c(constructIndicatorCorrelations,
 							cor(thisResults$constructs[,construct],
-							data[[thisDesignRow[7]]]$indicators[,indicator]))
+							data[[thisDesignRow[7]]]$indicators[,thisIndicator]))
 					}
 				}
 				
@@ -260,12 +278,12 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 					# Estimated R2 for endogenous constructCount
 					indices<-c(which(testedModel[construct,]==1)+constructCount,constructCount+construct)
-					if(length(indices)>0){
+					if(length(indices)>1){
 						R2s <- c(R2s,mat.regress(thisCorrelations[indices,indices],c(1:length(indices)-1),length(indices))$R2)
 					}
 				}
 				
-				GlobalGoF <- mean(R2s) * mean(constructIndicatorCorrelations^2)
+				GlobalGoF <- sqrt(mean(R2s) * mean(constructIndicatorCorrelations^2))
 				
 				cat("M",replication,designNumber,analysis,SRMR,GlobalGoF,meanSquareResiduals,varianceExplainedCommonFactor,smallestPositiveCorrelation,secondSmallestPositiveCorrelation,sep="\t")
 				cat("\n")

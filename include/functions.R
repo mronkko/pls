@@ -213,7 +213,7 @@ estimateWithRegression<-function(model,data,method){
 }
 
 estimateWithPlspm<-function(model,data){
-
+	return(NULL)
 	constructCount=ncol(model)
 	indicatorCount=ncol(data)/constructCount
 	
