@@ -10,6 +10,8 @@ library(lavaan)
 library(car)
 library(foreign)
 library(lme4)
+library(QuantPsyc)
+library(gplots)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -42,7 +44,7 @@ labels<-list(
 	factorLoading="Meand factor loading",
 	factorLoadingInterval="Factor loading variation",
 	maxErrorCorrelation="Max error correlations",
-	methodVariance="Method variances")
+	methodVariance="Method variances",GlobalGoF="Global goodness of fit",meanSquareResiduals="Indicator mean square residual",SRMR="SRMR")
 
 designMatrix<-createdesignMatrix()
 
@@ -197,7 +199,8 @@ if( ! exists("constructData")){
 if(!file.exists("results/table3_full.tex")){
 	# General information about quality of measurement
 	
-	constructDataPlus<-merge(constructData,modelData)
+	constructDataPlus<-merge(constructData,modelData,by=c("replication","analysis","designNumber"))
+	
 	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
 	"maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes,labels=labels)
 	
@@ -377,8 +380,6 @@ if(!file.exists("results/table10_full.tex")){
 hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row)
 }
 
-stop("DEBUGGGG")
-
 ######## TABLES 11 ############
 
 if(!file.exists("results/table11_full.tex")){
@@ -427,7 +428,7 @@ if(!file.exists("results/table11_full.tex")){
 
 	temp<-aggregate(constructData[,c("designNumber","replication","construct",constructDependents)], by=list(constructData[,"designNumber"],constructData[,"replication"],constructData[,"construct"]),  FUN=mean, na.rm=TRUE)
 	
-	temp<-merge(temp,constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"))
+	temp<-merge(constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"),temo)
 	
 	temp[,constructDependents]<-temp[,paste(constructDependents,"x",sep=".")]-temp[,paste(constructDependents,"y",sep=".")]
 	
@@ -438,7 +439,7 @@ if(!file.exists("results/table11_full.tex")){
 	relationshipsForRegression<-relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipIndependents)]
 
 	temp<-aggregate(relationshipData[,c("designNumber","replication","to","from",relationshipDependents)], by=list(relationshipData[,"designNumber"],relationshipData[,"replication"],relationshipData[,"to"],relationshipData[,"from"]),  FUN=mean, na.rm=TRUE)
-	temp<-merge(temp,relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"))
+	temp<-merge(relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"),temp)
 	
 	temp[,relationshipDependents]<-temp[,paste(relationshipDependents,"x",sep=".")]-temp[,paste(relationshipDependents,"y",sep=".")]
 	
@@ -456,7 +457,7 @@ if(!file.exists("results/table11_full.tex")){
 	# Merge design related things
 	
 	relationshipsForRegression<-merge(relationshipsForRegression,designMatrix,by="designNumber")
-	constructsForRegression<-merge(constructsForRegression,tempDesignMatrix,by="designNumber")
+	constructsForRegression<-merge(constructsForRegression,designMatrix,by="designNumber")
 
 	print("Done merging data for regressions")
 	
@@ -468,7 +469,7 @@ if(!file.exists("results/table11_full.tex")){
 	
 	relationshipsForRegression$from<-relationshipsForRegression$from+12*(relationshipsForRegression$replication*729+relationshipsForRegression$designNumber)
 	
-	}
+	
 	
 	# Recode some variables so that they make more sense in the regressions
 
@@ -478,8 +479,16 @@ if(!file.exists("results/table11_full.tex")){
 	relationshipsForRegression[,"trueCorrelation"]<-abs(relationshipsForRegression[,"trueCorrelation"])
 	
 	relationshipsForRegression[,"regressionTrueScore"]<-abs(relationshipsForRegression[,"regressionTrueScore"])
+	
+	#Standardixe the data to make it easier to interpret
+	
+	temp<-setdiff(names(relationshipsForRegression),c("to","from","replication","desingNumber","populationPathValues","specifiedAsPath"))
+	relationshipsForRegression[,temp]<-Make.Z(relationshipsForRegression[,temp])
 
+	temp<-setdiff(names(constructsForRegression),c("replication","desingNumber","populationPathValues","specifiedAsPath"))
+	constructsForRegression[,temp]<-Make.Z(constructsForRegression[,temp])
 	modelResults<-NULL
+	
 	
 	dependentGroups<-list(constructDependents,correlationDependents,regressionDependents,errorDependents)
 	
@@ -491,20 +500,20 @@ if(!file.exists("results/table11_full.tex")){
 			data<-relationshipsForRegression
 		}
 		
-		tempLimit<-min(4,dependentGroup+1)
-		
 		dependents<-dependentGroups[[dependentGroup]]
 		
 		for(dependent in 1:length(dependents)){
-			for(modelIndex in 1:tempLimit){
+			# One model with experimental conditions only and one model with everything
+			for(modelIndex in 1:2){
 				print(paste(dependentGroup,dependent,modelIndex))
 				independents <- designIndependents
+
 				if(modelIndex>1){ 	
 					independents<-c(independents,constructIndependents)
 					if(dependentGroup>1) independents<-c(independents, paste(constructIndependents,"from",sep="."))
+					if(dependentGroup>2) independents<-c(independents,correlationIndependents)
+					if(dependentGroup>3) independents<-c(independents,regressionIndependents)
 				}
-				if(modelIndex>2) independents<-c(independents,correlationIndependents)
-				if(modelIndex>3) independents<-c(independents,regressionIndependents)
 				
 				# All regression and errorthings have "specifiedAsPath" as always positive, so it needs to be dropped 
 				if(dependentGroup>2){
@@ -524,8 +533,7 @@ if(!file.exists("results/table11_full.tex")){
 				
 				lmr<-lmer(as.formula(strFormula),data=data)
 				
-				#Remove the data frame to save memory
-				lmr@frame<-data.frame()
+				#TODO: Store only the results to save memory.
 				
 				modelResults<-c(modelResults,lmr)
 			}
@@ -551,7 +559,17 @@ if(!file.exists("results/table11_full.tex")){
 	
 	file<-"table11"
 	
-	print(formattedTableData)
+
+
+
+	}
+	
+	#Remove the intercept since it is zero
+	formattedTableData<-formattedTableData[2:nrow(formattedTableData),]
+	
+	evenCols<-formattedTableData[1:12,1:9*2]
+	formattedTableData<-formattedTableData[,1:10*2-1]
+	formattedTableData[1:12,2:10]<-evenCols
 	
 	add.to.row<-list(list(nrow(formattedTableData)-6,nrow(formattedTableData)-7),c("\\midrule ","\\midrule "))
 	
@@ -583,7 +601,9 @@ if(!file.exists("results/figure5.pdf")){
 
 		tempData <- dataSample[dataSample$analysis==i,]
 
-		plot(tempData$trueR2,tempData$estimatedR2,xlab="Real R2",ylab="Estimated R2",main=labels[[analysisTypes[i]]])
+		samp<-sample(1:nrow(tempData),1000)
+
+		plot(tempData[samp,]$trueR2,tempData[samp,]$estimatedR2,xlab="Real R2",ylab="Estimated R2",main=labels[[analysisTypes[i]]])
 		abline(0, 1)
 
 	}
@@ -681,6 +701,32 @@ if(FALSE & !file.exists("results/figure7.pdf")){
 	#dev.off()
 }
 
+#
+# A plot of mean ARE and mean SE as a function of the true population value
+#
+#
+
+if(FALSE & !file.exists("results/figure8.pdf")){
+	
+	# Do a distribution plot for p-value when there is no effect
+	
+	#pdf(file="results/figure7.pdf")
+	
+	
+	par(mfrow=c(2,2)) 
+	tempData<-relationshipData[relationshipData$analysis==4,c("regressionARE","regressionSE","regressionTrueScore")]
+
+	bandplot(tempData$regressionTrueScore,tempData$regressionARE)
+	bandplot(tempData$regressionTrueScore,tempData$regressionSE)
+	
+	tempData<-relationshipData[relationshipData$analysis==1,c("regressionARE","regressionSE","regressionTrueScore")]
+
+	bandplot(tempData$regressionTrueScore,tempData$regressionARE)
+	bandplot(tempData$regressionTrueScore,tempData$regressionSE)
+	
+
+	#dev.off()
+}
 
 
 

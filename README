@@ -1,3 +1,6 @@
+
+*******  OVERVIEW  *******
+
 This project runs a MonteCarlo simulation of PLS as a streaming MapReduce job.
 
 MapReduce is an algorithm that divides work in a computing cluster. One
@@ -7,23 +10,35 @@ These subtasks are then run on separate nodes that run the reducer script.
 
 See also http://labs.google.com/papers/mapreduce.html
 
-This set of script takes a text file that contains information about population models, tested models, and simulation parameters. These are divided in the
-mapper and passed on to the reducers that will run the jobs.
+This set of script takes creates a text file that contains information about
+population models, tested models, and simulation parameters. These are divided
+in the mapper and passed on to the reducers that will run the jobs.
+
+The simulation is executed in four steps. First, the prepare.R script is used
+to create an input file. This input file can be processed locally by executing 
+
+cat input.txt | ./map.R | ./reduce.R
+
+or by uploading the files to Amazon cloud and running the simulation as a 
+streaming job in Elastic MapReduce. The input file needs to be prepared on a 
+local computer.
+
+The text file(s) that are produced by MapReduce are parsed with the file
+parseMapReduceData.sh, which reads the results into three csv files called
+constructs.csv, relationships.csv, and models.csv containing construct, relationship, and model level results.
 
 
-The simulation can be executed either by running main.R, which runs the simulation as a single thread run, or by uploading the files to Amazon cloud and running the simulation as a streaming job in Elastic MapReduce. The input file needs to be prepared on a local computer.
+*******  CONTENT OF THE FILES  *******
 
-For an example of how to run R in Amazon cloud, see the following links.
-
-Content of the files
-
-input.txt: A text file that contains a list of the replication numbers that will
-be executed. 
-main.R: The main file that will run the MapReduce job in a single thread locally. The job runs for a long time, so this is only for testing.
+prepare.R: A file that creates an input file that the MapReduce algorithm processes.
 map.R: Map executable
 reduce.R: Reduce executable
-functions.R: Functions to that are needed for the simulation
-parameters.R: Simulation parameters
-prepare.R: A file that creates an input file that the MapReduce algorithm processes.
-combine.R: Reads in the output from reducers, combines these, and stores the resulting R objects on disk
-report.R: Reads the combined output and gnerates tables and figures based on the input.
+parseMapReduceData.sh: Reads the results files from Elastic MapReduce and stores the results into three csv files.
+tablesAndFigures.R: Reads the combined output and gnerates tables and figures based on the input.
+include/functions.R, include/functionsPrepare.R, include/functionsTablesAndFigures.R: Functions to that are needed for the simulation
+include/parameters.R: Simulation parameters
+
+*******  DETAILS OF THE SIMULATION  *******
+
+The prepare.R script creates a text file that contains 81 rows for each
+replication. Each line describes ---TO BE WRITTEN ---
