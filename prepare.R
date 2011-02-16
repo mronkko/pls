@@ -57,11 +57,17 @@ for(replicationNumber in 1:replications){
 		# Generate a population model here. We need two matrices. 
 		# First matrix contains 1s and 0s to store which paths are specified
 		# Second matrix contains the path values
-	    
-		populationModelWhichPaths <- generateRandomModel(thisNumberOfConstructs,thisExpectedNumberOfOutgoingPaths)
 
-		populationModel<-setPopulationModelPathValues(populationModelWhichPaths,thisPopulationPathValues)
-		
+#		print("Choosing paths")
+	  
+		populationModel<-NULL
+	  	
+	  	while(is.null(populationModel)){
+	  	
+		  	populationModelWhichPaths <- generateRandomModel(thisNumberOfConstructs,thisExpectedNumberOfOutgoingPaths)
+
+			populationModel<-setPopulationModelPathValues(populationModelWhichPaths,thisPopulationPathValues)
+		}
 	    
 		# Generate all tested models for this population model.
 
@@ -69,10 +75,16 @@ for(replicationNumber in 1:replications){
 
 		for(omittedPathsShareIndex in 1:3){
 		    for(extraPathsIndex in 1:3){
-				testedModels[[omittedPathsShareIndex*3+extraPathsIndex-1]] <- generateTestedModel(populationModelWhichPaths,omittedPathsShare[omittedPathsShareIndex],extraPaths[extraPathsIndex])
+
+				testedModels[[(omittedPathsShareIndex-1)*3+extraPathsIndex]] <- generateTestedModel(populationModelWhichPaths,omittedPathsShare[omittedPathsShareIndex],extraPaths[extraPathsIndex])
 			}
 		}
-
+		
+		debugPrint("Population model")
+		debugPrint(populationModelWhichPaths)
+		debugPrint("Tested model")
+		debugPrint(testedModels)
+		
 		# The population model is tested with 3 different sample sizes. Run each
 		# as a separeate reduce job.
 		
@@ -112,7 +124,7 @@ for(replicationNumber in 1:replications){
 				extraPathsIndex <- designMatrix[startIndex+omittedPathsShareIndex*3-3,6]
 	
 				cat("\t",file="input.txt",append=TRUE)
-				cat(testedModels[[omittedPathsShareIndex*3+extraPathsIndex-1]],sep="\t",file="input.txt",append=TRUE)
+				cat(testedModels[[(omittedPathsShareIndex-1)*3+extraPathsIndex]],sep="\t",file="input.txt",append=TRUE)
 
 			}
 			

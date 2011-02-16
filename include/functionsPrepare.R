@@ -15,7 +15,7 @@ generateRandomModel<-function(numberOfConstructs,expectedNumberOfOutgoingPaths){
 	pathProbability<-expectedNumberOfOutgoingPaths*numberOfConstructs/(numberOfConstructs^2-numberOfConstructs)
 	
 	#Create a vector of 1s and 0s to store the structural model
-	populationModel <- matrix(runif(numberOfConstructs)<pathProbability,numberOfConstructs,numberOfConstructs)
+	populationModel <- matrix(runif(numberOfConstructs^2)<pathProbability,numberOfConstructs,numberOfConstructs)
 	
 	#Set the upper triangle and diagonal to NA
 	populationModel[upper.tri(populationModel,diag=TRUE)] <- NA
@@ -108,36 +108,35 @@ ensureThatModelIsValid<-function(model){
 setPopulationModelPathValues <- function(populationModelWhichPaths,populationPathValues){
 	
 	
-	continue<-TRUE
+	populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
 
-	while(continue){
-		populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
+	# Finally, we need to ensure that the model is valid. We do this by
+	# generating the population covariance matrix for the models by applying  # tracing rules, then setting the variances to 1 and testing if this is
+	# a valid correlation matrix
+	# If this check fails, the population model path values must be
+	# regenerated. (This is very rare, but can happen.)
 
-		# Finally, we need to ensure that the model is valid. We do this by
-		# generating the population covariance matrix for the models by applying  # tracing rules, then setting the variances to 1 and testing if this is
-		# a valid correlation matrix
-		# If this check fails, the population model path values must be
-		# regenerated. (This is very rare, but can happen.)
+	# Start with a diagonal matrix
+	sigma<-diag(ncol(populationModel))
 	
-		# Start with a diagonal matrix
-		sigma<-diag(ncol(populationModel))
-		
-		# Fill in the lower diagonal with covariances.
-		for(row in 2:nrow(populationModel)){
-			for(col in 1:(row-1)){
-				sigma[row,col]=sum(populationModel[row,]*sigma[,col],na.rm=TRUE)
-			}
+	# Fill in the lower diagonal with covariances.
+	for(row in 2:nrow(populationModel)){
+		for(col in 1:(row-1)){
+			sigma[row,col]=sum(populationModel[row,]*sigma[,col],na.rm=TRUE)
 		}
-		
-		#Copy the lower diagonal to upper diagonal
-		sigma <- sigma+ t(sigma) - diag(ncol(populationModel))
-		
-		#Test if this is a valid correlation matrix by checking that all the eigen values are positive
-		
-		continue<-min(eigen(sigma,only.value=TRUE)$values)<0
 	}
 	
-	return(list(paths=populationModel,covariances=sigma))
+	#Copy the lower diagonal to upper diagonal
+	sigma <- sigma+ t(sigma) - diag(ncol(populationModel))
+	
+	#Test if this is a valid correlation matrix by checking that all the eigen values are positive
+	
+	if(continue<-min(eigen(sigma,only.value=TRUE)$values)<0){
+		return(NULL)
+	}
+	else{
+		return(list(paths=populationModel,covariances=sigma))
+	}
 }
 
 #

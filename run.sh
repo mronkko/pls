@@ -22,7 +22,7 @@ s3cmd put cache.zip input.txt map.R reduce.R bootstrap.sh s3://$INPUT/
 #
 
 
-elastic-mapreduce --create --stream --input s3://$INPUT/input.txt --output s3://$OUTPUT/  --mapper s3://$INPUT/map.R --reducer s3://$INPUT/reduce.R  --cache-archive s3://$INPUT/cache.zip#include --log-uri s3://$LOGS/ --instance-type c1.medium --instance-count 2  --bootstrap-action s3://$INPUT/bootstrap.sh
+elastic-mapreduce --create --stream --input s3://$INPUT/input.txt --output s3://$OUTPUT/  --mapper s3://$INPUT/map.R --reducer s3://$INPUT/reduce.R  --cache-archive s3://$INPUT/cache.zip#include --log-uri s3://$LOGS/ --instance-type c1.medium --instance-count 20  --bootstrap-action s3://$INPUT/bootstrap.sh
 
 #
 

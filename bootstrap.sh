@@ -5,10 +5,19 @@
 
 
 # debian R upgrade (Source: http://www.r-bloggers.com/bootstrapping-the-latest-r-into-amazon-elastic-map-reduce/)
-#echo "deb http://streaming.stat.iastate.edu/CRAN/bin/linux/debian lenny-cran/" | sudo tee -a /etc/apt/sources.list
+# Ensure that we are only using stable packages by over writing the apt sources and apt preferences
 
-sudo apt-get update 
-sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --force-yes r-recommended
+echo "deb http://ftp.us.debian.org/debian stable main non-free contrib" | sudo tee /etc/apt/sources.list
+
+echo 'Package: *
+Pin: release a=stable
+Pin-Priority: 990' | sudo tee /etc/apt/preferences
+
+cat /etc/apt/sources.list
+cat /etc/apt/preferences
+
+sudo apt-get -t stable update 
+sudo DEBIAN_FRONTEND=noninteractive apt-get -t stable install --yes --force-yes r-recommended
 
 
 # plspm: The PLS package
