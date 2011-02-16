@@ -5,19 +5,15 @@
 
 
 # debian R upgrade (Source: http://www.r-bloggers.com/bootstrapping-the-latest-r-into-amazon-elastic-map-reduce/)
-# Ensure that we are only using stable packages by over writing the apt sources and apt preferences
 
-echo "deb http://ftp.us.debian.org/debian stable main non-free contrib" | sudo tee /etc/apt/sources.list
+# Ensure that we are only using stable packages by over writing the apt sources and apt preferences. Add CRAN repository that contains R 2.11 backported for Debian Lenny that Amazon uses.
 
-echo 'Package: *
-Pin: release a=stable
-Pin-Priority: 990' | sudo tee /etc/apt/preferences
+echo 'deb http://http.us.debian.org/debian   lenny         main contrib non-free
+deb http://security.debian.org         lenny/updates main contrib non-free
+deb http://ftp.heanet.ie/mirrors/cran.r-project.org/bin/linux/debian lenny-cran/' | sudo tee /etc/apt/sources.list
 
-cat /etc/apt/sources.list
-cat /etc/apt/preferences
-
-sudo apt-get -t stable update 
-sudo DEBIAN_FRONTEND=noninteractive apt-get -t stable install --yes --force-yes r-recommended
+sudo apt-get update 
+sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --force-yes r-recommended
 
 
 # plspm: The PLS package
