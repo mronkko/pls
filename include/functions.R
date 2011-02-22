@@ -9,7 +9,7 @@ library(plspm)
 # A wrapper for print to allow easily commenting out all unneccessary print commmands
 #
 debugPrint<-function(x){
-# 	print(x)
+	print(x)
 }
 
 #
