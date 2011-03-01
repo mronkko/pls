@@ -8,6 +8,7 @@ library(plspm)
 #
 # A wrapper for print to allow easily commenting out all unneccessary print commmands
 #
+
 debugPrint<-function(x){
 	print(x)
 }
@@ -415,7 +416,7 @@ return(output)
 
 displayMemory<-function(obs){
 	for(i in 1:length(obs)){
-		print(obs[i])
-		print(object.size(get(obs[i])),units="Mb")
+		debugPrint(obs[i])
+		debugPrint(print(object.size(get(obs[i])),units="Mb"))
 	}
 }

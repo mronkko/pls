@@ -109,7 +109,7 @@ for(replicationNumber in 1:replications){
 			# separated in the following order:
 			# Counter, Index of first row, Index of last row
 			
-			cat(replicationNumber,startIndex,endIndex,sep="\t",file="input.txt",append=TRUE)
+			cat(counter,startIndex,endIndex,sep="\t",file="input.txt",append=TRUE)
 
 			cat("\t",file="input.txt",append=TRUE)
 

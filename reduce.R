@@ -1,12 +1,16 @@
 #!/usr/bin/env Rscript
 # The reducer receives a population model and tested model. It runs PLS and summed scales on all specified experimental conditions for these models and outputs the results as CSV. 
 
+#print("Starting reducer")
+
 source("include/parameters.R")
 source("include/functions.R")
 
+#debugPrint("Start loading libraries")
+
 library("psych")
 
-debugPrint("Inside reducer")
+#debugPrint("Done loading libraries")
 
 options(warn=-1)
 
@@ -19,8 +23,11 @@ con <- file("stdin", open = "r")
 
 
 while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
-	debugPrint(line)
+	displayMemory(ls())
 
+	debugPrint(line)
+	
+	
 	# Record the time that this iteration takes
 	timeStarted<-Sys.time()
 	
@@ -209,6 +216,9 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			
 		
 				thisCorrelations <-cor(cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators))
+
+				thisPaths<-as.data.frame(thisResults$paths, stringsAsFactors = FALSE)
+
 
 				# Variance explained by first common factor. It is possible that these does not converge, so capture error
 				
@@ -407,7 +417,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				# Then relationship level statistics
 				#
 				
-				thisPaths<-as.data.frame(results[[thisDesignRow[7]]][[analysis]]$paths, stringsAsFactors = FALSE)
 			
 				# Loop over all correlations in the lower diagonal
 				
