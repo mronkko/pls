@@ -1,3 +1,4 @@
+#! /usr/bin/env Rscript
 #
 # This file creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
 #
@@ -280,6 +281,10 @@ if(!file.exists("results/table6_full.tex")){
 	writeComparisonTable(relationshipData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes,labels=labels)
 }
 
+#
+# TODO: Check the stability of correlations across models and across data
+#
+
 ######## TABLE 7 ############
 
 if(!file.exists("results/table7_full.tex")){
@@ -384,9 +389,7 @@ hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row
 
 if(!file.exists("results/table11_full.tex")){
 
-	# A temporary if-statement to speed things up
-	if(FALSE){
-	
+
 	# a huge regression table
 	# DEPENDENTS
 	# Constructs: reliability, bias
@@ -428,7 +431,7 @@ if(!file.exists("results/table11_full.tex")){
 
 	temp<-aggregate(constructData[,c("designNumber","replication","construct",constructDependents)], by=list(constructData[,"designNumber"],constructData[,"replication"],constructData[,"construct"]),  FUN=mean, na.rm=TRUE)
 	
-	temp<-merge(constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"),temo)
+	temp<-merge(constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"),temp)
 	
 	temp[,constructDependents]<-temp[,paste(constructDependents,"x",sep=".")]-temp[,paste(constructDependents,"y",sep=".")]
 	
@@ -559,10 +562,6 @@ if(!file.exists("results/table11_full.tex")){
 	
 	file<-"table11"
 	
-
-
-
-	}
 	
 	#Remove the intercept since it is zero
 	formattedTableData<-formattedTableData[2:nrow(formattedTableData),]
@@ -728,7 +727,14 @@ if(FALSE & !file.exists("results/figure8.pdf")){
 	#dev.off()
 }
 
-
+#
+# Draw a plot of frequencies that a hypothesis that b is posite would be 
+# supported at different degrees of confidence.
+#
+# p values to use .10 .05 .01 .001
+#
+# Draw four plots, one for each method
+#
 
 
 
