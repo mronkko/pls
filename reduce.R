@@ -22,8 +22,12 @@ con <- file("stdin", open = "r")
 # combination. See prepare.R for details on the protocol.
 
 
-while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
-	displayMemory(ls())
+#while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+
+#Debugging 
+
+while(TRUE){
+	line<-"1	1	9	1	0	0	-0.396709	0	1	-0.1043997	-0.1015976	0	-0.1043997	1	0	-0.396709	-0.1015976	0	1	NA	0	0	-0.396709	NA	NA	-0.1043997	-0.1015976	NA	NA	NA	0	NA	NA	NA	NA	NA	0	0	1	NA	NA	1	1	NA	NA	NA	0	NA	NA	NA	NA	NA	1	1	0	NA	NA	1	1	NA	NA	NA	1	NA	NA	NA	NA	NA	1	1	0	NA	NA	0	1	NA	NA	NA	1	NA	NA	NA	NA"
 
 	debugPrint(line)
 	
@@ -76,6 +80,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 	testedModels<-list('1'=NULL,'2'=NULL,'3'=NULL)
 	data<-list('1'=NULL,'2'=NULL,'3'=NULL)
+
 	results<-list()
 	
 	for(designNumber in startIndex:endIndex){
@@ -97,6 +102,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 		if(is.null(data[[thisDesignRow[7]]])){
 			data[[thisDesignRow[7]]]<-generateData(constructTrueScores,indicatorCounts[thisDesignRow[7]],factorLoadings[thisDesignRow[8]],factorLoadingIntervals[thisDesignRow[9]],maxErrorCorrelations[thisDesignRow[10]],methodVariances[thisDesignRow[11]])
 		}
+
+		tempPLS<-NA
 		
 		for(analysis in 1:length(analysisTypes)){
 		
@@ -111,14 +118,22 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			# created and eliminates a few potential problems.
 
 
-			if(analysisTypes[analysis]=="pls"){
-				tryCatch(
-					results[[toString(designNumber)]][[analysis]] <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
-					,error = function(e){
-						debugPrint(e)
-						results[[toString(designNumber)]][[analysis]] <<- NA
-					}
-				)
+			if(analysisTypes[analysis]=="pls_Standard" | analysisTypes[analysis]=="pls_IndividualSignChanges" | analysisTypes[analysis]=="pls_ConstructLevelChanges"){
+				if(analysisTypes[analysis]=="pls_Standard"){
+					tryCatch(
+						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
+						,error = function(e){
+							debugPrint(e)
+						}
+					)
+				}
+				if(! is.na(tempPLS)){
+					#The index of first PLS analysis in the list of analyses is 4, so when we substiture 3 from that, we get the index of the PLS results in the tempres object
+					results[[toString(designNumber)]][[analysis]] <-tempPLS[[analysis-3]]
+				}
+				else{
+					results[[toString(designNumber)]][[analysis]] <- NA
+				}
 			}
 			else{
 				tryCatch(
@@ -140,12 +155,6 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	# After this we will analyze and report all data. 
 	#
 	
-	#
-	# TODO: Calculate Harman's single factor test and store the smallest positive correlation
-	# as indicators of method variance
-	# TODO: Store SRMR calculated with the construct true scores and the the estimated construct
-	# scores.
-	#
 	# Initialize some variables that we will use in all reporting
 
 	correctModel<- ! (is.na(populationModel$paths) | populationModel$paths==0)
@@ -238,9 +247,9 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					varianceExplainedCommonFactor<-NA
 				}
 				
-				# Smallest and second smallest positive correlation among items
+				# Smallest and second smallest positive correlation among constrcuts
 				
-				positiveCorrelations<-cor(data[[thisDesignRow[7]]]$indicators)
+				positiveCorrelations<-cor(data[[thisDesignRow[7]]]$constructs)
 				positiveCorrelations<-positiveCorrelations[positiveCorrelations>0]
 				smallestPositiveCorrelation<-min(positiveCorrelations)
 				secondSmallestPositiveCorrelation<-min(positiveCorrelations[positiveCorrelations>smallestPositiveCorrelation])
@@ -266,11 +275,10 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 							data[[thisDesignRow[7]]]$indicators[,thisIndicator]))
 					}
 				}
-				
-				residualCorrelationMatrix <- cov(residuals)
+				residualCorrelationMatrix<-cor(residuals)
 				diag(residualCorrelationMatrix)<-0
 				SRMR<-mean(residualCorrelationMatrix^2)
-				
+
 				# Mean square residuals
 				
 				meanSquareResiduals<-mean(residuals^2)
@@ -359,7 +367,15 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 					# Delta R2 when other true scores added as predictors
 					
-					deltaR2=mat.regress(thisCorrelations,1:constructCount,thisConstructCol)$R2-trueScoreCorrelation^2
+					deltaR2<-mat.regress(thisCorrelations,1:constructCount,thisConstructCol)$R2-trueScoreCorrelation^2
+					
+					#
+					# Calculate estimated R2 and true R2 when all linked constructs are used as predictors for this construct.
+					#
+
+					tempcols<-which(testedModel[construct,] | testedModel[,construct])
+					trueConstructR2<-mat.regress(thisCorrelations,tempcols,thisConstructCol-constructCount)$R2
+					estimatedConstructR2<-mat.regress(thisCorrelations,tempcols+constructCount,thisConstructCol)$R2
 					
 					# Within data sd
 					
@@ -407,7 +423,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					# constructNumber and then the results
 					
 					
-					cat("C",replication,designNumber,analysis,construct,CR, AVE, minFactorLoading, meanFactorLoading, maxCrossLoading, maxCorrelationWithOtherConstruct, trueScoreCorrelation, deltaR2, estimatedR2, trueR2, sdByData, sdByModels, incomingPathsCorrect, incomingPathsExtra, incomingPathsOmitted, outgoingPathsCorrect, outgoingPathsExtra, outgoingPathsOmitted, sep="\t")
+					cat("C",replication,designNumber,analysis,construct,CR, AVE, minFactorLoading, meanFactorLoading, maxCrossLoading, maxCorrelationWithOtherConstruct, trueScoreCorrelation, deltaR2, estimatedR2, trueR2, trueConstructR2, estimatedConstructR2, sdByData, sdByModels, incomingPathsCorrect, incomingPathsExtra, incomingPathsOmitted, outgoingPathsCorrect, outgoingPathsExtra, outgoingPathsOmitted, sep="\t")
 					cat("\n")
 				}
 				

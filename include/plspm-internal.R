@@ -192,18 +192,18 @@ function(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter,orig.weight
 
         W <- w.boot[[2]]
 
-		for(i in 1:length(signChangeCorrections)){ 
+		for(j in 1:length(signChangeCorrections)){ 
 			
-			currentResults<-boot.all[[signChangeCorrections[i]]]
+			currentResults<-boot.all[[signChangeCorrections[j]]]
     		
     		corrected.w<-w.boot[[1]]
     		corrected.W<-w.boot[[2]]
-    		if(signChangeCorrections[i]=="IndividualSignChanges"){
+    		if(signChangeCorrections[j]=="IndividualSignChanges"){
     			correctionVector=sign(corrected.w*orig.weights)
     			corrected.w<-correctionVector*corrected.w
     			corrected.W<-correctionVector*corrected.W
     		}
-    		else if(signChangeCorrections[i]=="ConstructLevelChanges"){
+    		else if(signChangeCorrections[j]=="ConstructLevelChanges"){
     			bitmatrix<-corrected.W!=0
     			flipConstructs<-colSums(bitmatrix*orig.weights-corrected.W)>colSums(bitmatrix*orig.weights+corrected.W)
 				flipMatrix<-matrix(flipConstructs,nrow = nrow(corrected.W), ncol = ncol(corrected.W), byrow =TRUE)
@@ -222,7 +222,7 @@ function(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter,orig.weight
 	        l.boot <- .pls.loads(X.boot, Y.boot, blocks)    
 	        currentResults[["LOADS"]][i,] <- l.boot[[1]]
 	        
-	        boot.all[[signChangeCorrections[i]]]<-currentResults
+	        boot.all[[signChangeCorrections[j]]]<-currentResults
 	    }
         i <- i + 1
     }

@@ -2,15 +2,18 @@
 
 # This file contains all function definitions needed for the MapReduce job.
 
-# The PLS packages
-library(plspm)
+# The PLS packages. Instead of loading the library, load modified files from cache
+# library(plspm)
+
+source("include/plspm-internal.R")
+source("include/plspm.R")
 
 #
 # A wrapper for print to allow easily commenting out all unneccessary print commmands
 #
 
 debugPrint<-function(x){
-	print(x)
+	# print(x)
 }
 
 #
@@ -215,6 +218,9 @@ estimateWithRegression<-function(model,data,method){
 
 estimateWithPlspm<-function(model,data){
 
+	# Uncomment this to run wihtout PLS
+	# return(NA)
+	
 	constructCount=ncol(model)
 	indicatorCount=ncol(data)/constructCount
 	
@@ -235,12 +241,22 @@ estimateWithPlspm<-function(model,data){
 	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=TRUE)
 	
 	# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-	paths<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot$paths)
+	
+	pathsStandard<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["Standard"]]$paths)
+	pathsIndicatorCorrection<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["IndividualSignChanges"]]$paths)
+	pathsConstructCorrection<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["ConstructLevelChanges"]]$paths)
+	
 
-	colnames(paths)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
-	rownames(paths)<-c(1:nrow(paths))
+	colnames(pathsStandard)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+	rownames(pathsStandard)<-c(1:nrow(pathsStandard))
+	colnames(pathsIndicatorCorrection)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+	rownames(pathsIndicatorCorrection)<-c(1:nrow(pathsIndicatorCorrection))
+	colnames(pathsConstructCorrection)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+	rownames(pathsConstructCorrection)<-c(1:nrow(pathsConstructCorrection))
 
-	return(list(constructs=plsResults$latents,paths=paths))
+	return(list(Standard=list(constructs=plsResults$latents,paths=pathsStandard),
+			IndividualSignChanges=list(constructs=plsResults$latents,paths=pathsIndicatorCorrection),
+			ConstructLevelChanges=list(constructs=plsResults$latents,paths=pathsConstructCorrection)))
 }
 
 

@@ -202,8 +202,7 @@ if(!file.exists("results/table3_full.tex")){
 	
 	constructDataPlus<-merge(constructData,modelData,by=c("replication","analysis","designNumber"))
 	
-	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading",
-	"maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes,labels=labels)
+	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading","maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes,labels=labels)
 	
 	rm(constructDataPlus)
 }
