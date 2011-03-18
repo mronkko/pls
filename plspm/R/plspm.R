@@ -1,6 +1,8 @@
+print("Loading plspm with enhancements by Mikko")
+
 plspm <-
 function(x, inner, outer, modes=NULL, scheme="centroid", scaled=TRUE,
-            boot.val=FALSE, br=NULL, plsr=FALSE, tol=0.00001, iter=100, dataset=TRUE)
+            boot.val=FALSE, br=NULL, plsr=FALSE, tol=0.00001, iter=100, dataset=TRUE, signchanges="no")
 {
     # =========================== ARGUMENTS ====================================
     # x: a numeric matrix or data.frame containing the manifest variables
@@ -221,12 +223,12 @@ function(x, inner, outer, modes=NULL, scheme="centroid", scaled=TRUE,
         } else 
         { 
             n.efs <- nrow(Path.efs)
-            res.boot <- .pls.boot(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter)
+            res.boot <- .pls.boot(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter,out.weights)
         }
         res <- list(outer.mod=outmod, inner.mod=innmod, latents=Z.lvs, scores=Y.lvs,
                    out.weights=out.weights, loadings=loads, path.coefs=Path, r.sqr=R2,
                    outer.cor=outcor, inner.sum=innsum, effects=Path.efs, unidim=unidim, gof=gof, 
-                   boot=res.boot, data=data, model=model)
+                   boot=res.boot[["Standard"]],boot.all=res.boot, data=data, model=model)
     } # end 'if' bootstrapping
     # --------------------------------------------------------------------
     class(res) <- "plspm"

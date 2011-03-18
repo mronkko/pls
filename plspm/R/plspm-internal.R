@@ -85,9 +85,27 @@ function(IDM, Y)
     return(E)
 }
 
+#
+# DM: Data matrix
+# IDM: Inner model
+# blocks: outer model
+# modes: a character vector indicating the measurement type for each 
+#        latent variable. "A" reflective, "B" formative
+# scheme: a character string indicating the inner weighting scheme 
+#         to be used: "factor", "centroid", or "path"
+# scaled: a logical value indicating whether scale data is performed
+# br: an integer indicating the number of bootstraps resamples, used 
+# plsr: a logical value for calculating path coeffs by pls-regression
+# tol: tolerance threshold for calculating outer weights (0.00001)
+# iter: an integer indicating the maximum number of iterations (100)
+# orig.weights: original weights. Used for sign corrections
+
 .pls.boot <-
-function(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter)
+function(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter,orig.weights)
 {
+
+	signChangeCorrections<-c("Standard","IndividualSignChanges","ConstructLevelChanges")
+	
     lvs <- nrow(IDM)
     lvs.names <- rownames(IDM)
     mvs <- ncol(DM)
@@ -128,13 +146,24 @@ function(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter)
     for (j in 1:lvs)
         for (i in j:lvs)
              if (IDM[i,j]==1) 
-                 path.labs <- c(path.labs, paste(lvs.names[j],"->",lvs.names[i],sep=""))    
+                 path.labs <- c(path.labs, paste(lvs.names[j],"->",lvs.names[i],sep=""))
+    
+    
     WEIGS <- matrix(NA, bootnum, mvs)
     LOADS <- matrix(NA, bootnum, mvs)
     PATHS <- matrix(NA, bootnum, sum(IDM))
     TOEFS <- matrix(NA, bootnum, nrow(Path.efs))
     RSQRS <- matrix(NA, bootnum, sum(endo))
+	
+	boot.all<-list()
+	for(i in 1:length(signChangeCorrections)){ 
+		boot.all[[signChangeCorrections[i]]]<-list(WEIGS=WEIGS,LOADS=LOADS,PATHS=PATHS,TOEFS=TOEFS,RSQRS=RSQRS)
+	}
+	#
+	# The main bootsrapping loop
+	#
     i <- 1
+    W <- NULL
     while (i <= bootnum)
     {
         boot.obs <- sample.int(nrow(X), size=nrow(X), replace=TRUE)
@@ -147,47 +176,99 @@ function(DM, IDM, blocks, modes, scheme, scaled, br, plsr, tol, iter)
             X.boot <- scale(DM.boot, scale=FALSE)
         }
         colnames(X.boot) <- mvs.names
-        # calculating boot model parameters 
-        w.boot <- .pls.weights(X.boot, IDM, blocks, modes, scheme, tol, iter)
+
+        # calculating boot model parameters. Use the weights from previous iteration as starting
+        # values. If this is the first iteration, set startign values to null
+
+        w.boot <- .pls.weights(X.boot, IDM, blocks, modes, scheme, tol, iter,W)
         if (is.null(w.boot)) {
             i <- i - 1
             next
         }
-        WEIGS[i,] <- w.boot[[1]]
-        Y.boot <- X.boot %*% w.boot[[2]]
-        pathmod <- .pls.paths(IDM, Y.boot, plsr)
-        P.boot <- pathmod[[2]]
-        Toef.boot <- .pls.efects(P.boot)
-        PATHS[i,] <- as.vector(P.boot[which(IDM==1)])
-        TOEFS[i,] <- Toef.boot[,4]
-        RSQRS[i,] <- pathmod[[3]][which(endo==1)]
-        l.boot <- .pls.loads(X.boot, Y.boot, blocks)    
-        LOADS[i,] <- l.boot[[1]]
+        
+        #
+        # Apply the three different sign change corrections and store the results
+        #
+
+        W <- w.boot[[2]]
+
+		for(i in 1:length(signChangeCorrections)){ 
+			
+			currentResults<-boot.all[[signChangeCorrections[i]]]
+    		
+    		corrected.w<-w.boot[[1]]
+    		corrected.W<-w.boot[[2]]
+    		if(signChangeCorrections[i]=="IndividualSignChanges"){
+    			correctionVector=sign(corrected.w*orig.weights)
+    			corrected.w<-correctionVector*corrected.w
+    			corrected.W<-correctionVector*corrected.W
+    		}
+    		else if(signChangeCorrections[i]=="ConstructLevelChanges"){
+    			bitmatrix<-corrected.W!=0
+    			flipConstructs<-colSums(bitmatrix*orig.weights-corrected.W)>colSums(bitmatrix*orig.weights+corrected.W)
+				flipMatrix<-matrix(flipConstructs,nrow = nrow(corrected.W), ncol = ncol(corrected.W), byrow =TRUE)
+    			corrected.W[flipMatrix]<- - corrected.W[flipMatrix]
+    			corrected.w<-rowSums(corrected.W)
+    		}
+    		
+	        currentResults[["WEIGS"]][i,] <- corrected.w
+	        Y.boot <- X.boot %*% corrected.W
+	        pathmod <- .pls.paths(IDM, Y.boot, plsr)
+	        P.boot <- pathmod[[2]]
+	        Toef.boot <- .pls.efects(P.boot)
+	        currentResults[["PATHS"]][i,] <- as.vector(P.boot[which(IDM==1)])
+	        currentResults[["TOEFS"]][i,] <- Toef.boot[,4]
+	        currentResults[["RSQRS"]][i,] <- pathmod[[3]][which(endo==1)]
+	        l.boot <- .pls.loads(X.boot, Y.boot, blocks)    
+	        currentResults[["LOADS"]][i,] <- l.boot[[1]]
+	        
+	        boot.all[[signChangeCorrections[i]]]<-currentResults
+	    }
         i <- i + 1
     }
+    
+    #
+    # End of the main bootsrapping loop
+    #
+    
     # Outer weights
-    colnames(WEIGS) <- mvs.names
-    WB <- data.frame(Original = wgs.orig, Mean.Boot = apply(WEIGS, 2, mean), 
-        Std.Error = apply(WEIGS, 2, sd), perc.05 = apply(WEIGS, 2, function(x) quantile(x, 0.05)),
-        perc.95 = apply(WEIGS, 2, function(x) quantile(x, 0.95)))
-    colnames(LOADS) <- mvs.names
-    LB <- data.frame(Original = loads.orig, Mean.Boot = apply(LOADS, 2, mean),
-        Std.Error = apply(LOADS, 2, sd), perc.05 = apply(LOADS, 2, function(x) quantile(x, 0.05)),
-        perc.95 = apply(LOADS, 2, function(x) quantile(x, 0.95)))
-    colnames(PATHS) <- path.labs
-    PB <- data.frame(Original = path.orig, Mean.Boot = apply(PATHS, 2, mean),
-        Std.Error = apply(PATHS, 2, sd), perc.05 = apply(PATHS, 2, function(x) quantile(x, 0.05)),
-        perc.95 = apply(PATHS, 2, function(x) quantile(x, 0.95)))
-    colnames(TOEFS) <- Path.efs[, 1]
-    TE <- data.frame(Original = Path.efs[, 4], Mean.Boot = apply(TOEFS, 2, mean), 
-        Std.Error = apply(TOEFS, 2, sd), perc.05 = apply(TOEFS, 2, function(x) quantile(x, 0.05)), 
-        perc.95 = apply(TOEFS, 2, function(x) quantile(x, 0.95)))
-    colnames(RSQRS) <- lvs.names[endo == 1]
-    RB <- data.frame(Original = r2.orig, Mean.Boot = apply(RSQRS, 2, mean),
-        Std.Error = apply(RSQRS, 2, sd), perc.05 = apply(RSQRS, 2, function(x) quantile(x, 0.05)),
-        perc.95 = apply(RSQRS, 2, function(x) quantile(x, 0.95)))
-    # Bootstrap Results
-    res.boot <- list(weights=WB, loadings=LB, paths=PB, rsq=RB, total.efs=TE)
+
+	res.boot<-list()
+	
+	for(i in 1:length(signChangeCorrections)){ 
+		
+		currentResults<-boot.all[[signChangeCorrections[i]]]
+		WEIGS<-currentResults$WEIGS
+		LOADS<-currentResults$LOADS
+		PATHS<-currentResults$PATHS
+		TOEFS<-currentResults$TOEFS
+		RSQRS<-currentResults$RSQRS
+
+	    colnames(WEIGS) <- mvs.names
+	    WB <- data.frame(Original = wgs.orig, Mean.Boot = apply(WEIGS, 2, mean), 
+	        Std.Error = apply(WEIGS, 2, sd), perc.05 = apply(WEIGS, 2, function(x) quantile(x, 0.05)),
+	        perc.95 = apply(WEIGS, 2, function(x) quantile(x, 0.95)))
+	    colnames(LOADS) <- mvs.names
+	    LB <- data.frame(Original = loads.orig, Mean.Boot = apply(LOADS, 2, mean),
+	        Std.Error = apply(LOADS, 2, sd), perc.05 = apply(LOADS, 2, function(x) quantile(x, 0.05)),
+	        perc.95 = apply(LOADS, 2, function(x) quantile(x, 0.95)))
+	    colnames(PATHS) <- path.labs
+	    PB <- data.frame(Original = path.orig, Mean.Boot = apply(PATHS, 2, mean),
+	        Std.Error = apply(PATHS, 2, sd), perc.05 = apply(PATHS, 2, function(x) quantile(x, 0.05)),
+	        perc.95 = apply(PATHS, 2, function(x) quantile(x, 0.95)))
+	    colnames(TOEFS) <- Path.efs[, 1]
+	    TE <- data.frame(Original = Path.efs[, 4], Mean.Boot = apply(TOEFS, 2, mean), 
+	        Std.Error = apply(TOEFS, 2, sd), perc.05 = apply(TOEFS, 2, function(x) quantile(x, 0.05)), 
+	        perc.95 = apply(TOEFS, 2, function(x) quantile(x, 0.95)))
+	    colnames(RSQRS) <- lvs.names[endo == 1]
+	    RB <- data.frame(Original = r2.orig, Mean.Boot = apply(RSQRS, 2, mean),
+	        Std.Error = apply(RSQRS, 2, sd), perc.05 = apply(RSQRS, 2, function(x) quantile(x, 0.05)),
+	        perc.95 = apply(RSQRS, 2, function(x) quantile(x, 0.95)))
+	
+	    # Bootstrap Results
+	    res.boot[[signChangeCorrections[i]]] <- list(weights=WB, loadings=LB, paths=PB, rsq=RB, total.efs=TE)
+	}
+
     return(res.boot)
 }
 
@@ -710,7 +791,7 @@ function(DM, blocks, modes)
 }
 
 .pls.weights <-
-function(X, IDM, blocks, modes, scheme, tol, iter)
+function(X, IDM, blocks, modes, scheme, tol, iter, W=NULL)
 {
     lvs <- nrow(IDM)
     mvs <- ncol(X)
@@ -723,7 +804,11 @@ function(X, IDM, blocks, modes, scheme, tol, iter)
     ODM <- matrix(0, mvs, lvs)
     for (j in 1:lvs)
         ODM[which(blocklist==j),j] <- rep(1,blocks[j])
-    W <- ODM %*% diag(1/(sd(X %*% ODM)*sdv),lvs,lvs)
+     
+    # If starting values of W are not specified, set them.
+    
+    if(is.null(W))
+	    W <- ODM %*% diag(1/(sd(X %*% ODM)*sdv),lvs,lvs)
     w.old <- rowSums(W)    
     w.dif <- 1
     itermax <- 1
