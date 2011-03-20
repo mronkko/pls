@@ -6,12 +6,6 @@
 source("include/parameters.R")
 source("include/functions.R")
 
-#debugPrint("Start loading libraries")
-
-library("psych")
-
-#debugPrint("Done loading libraries")
-
 options(warn=-1)
 
 designMatrix<-createdesignMatrix()
@@ -22,12 +16,12 @@ con <- file("stdin", open = "r")
 # combination. See prepare.R for details on the protocol.
 
 
-#while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 #Debugging 
 
-while(TRUE){
-	line<-"1	1	9	1	0	0	-0.396709	0	1	-0.1043997	-0.1015976	0	-0.1043997	1	0	-0.396709	-0.1015976	0	1	NA	0	0	-0.396709	NA	NA	-0.1043997	-0.1015976	NA	NA	NA	0	NA	NA	NA	NA	NA	0	0	1	NA	NA	1	1	NA	NA	NA	0	NA	NA	NA	NA	NA	1	1	0	NA	NA	1	1	NA	NA	NA	1	NA	NA	NA	NA	NA	1	1	0	NA	NA	0	1	NA	NA	NA	1	NA	NA	NA	NA"
+#while(TRUE){
+#	line<-"1	1	9	1	0	0	-0.396709	0	1	-0.1043997	-0.1015976	0	-0.1043997	1	0	-0.396709	-0.1015976	0	1	NA	0	0	-0.396709	NA	NA	-0.1043997	-0.1015976	NA	NA	NA	0	NA	NA	NA	NA	NA	0	0	1	NA	NA	1	1	NA	NA	NA	0	NA	NA	NA	NA	NA	1	1	0	NA	NA	1	1	NA	NA	NA	1	NA	NA	NA	NA	NA	1	1	0	NA	NA	0	1	NA	NA	NA	1	NA	NA	NA	NA"
 
 	debugPrint(line)
 	
@@ -120,6 +114,10 @@ while(TRUE){
 
 			if(analysisTypes[analysis]=="pls_Standard" | analysisTypes[analysis]=="pls_IndividualSignChanges" | analysisTypes[analysis]=="pls_ConstructLevelChanges"){
 				if(analysisTypes[analysis]=="pls_Standard"){
+					#We need to print something periodically to avoid timeout. Write this to both stderr and stdout to be sure that we see what is going on
+					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stderr())
+					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stdout())
+
 					tryCatch(
 						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
 						,error = function(e){

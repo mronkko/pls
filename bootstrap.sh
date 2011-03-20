@@ -34,6 +34,6 @@ R --version
 # to pull the entire dependency tree behind these packages.
 
 # Running with sudo to make sure that R has permissions to install packages
-
-echo 'install.packages(c("plspm","amap","diagram","shape","psych"),repos="http://cran.r-project.org")' | sudo R --no-save 
+# These are no longer needed. The function definitions are included in functions.R
+# echo 'install.packages(c("plspm","amap","diagram","shape","psych"),repos="http://cran.r-project.org")' | sudo R --no-save 
 
