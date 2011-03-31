@@ -13,7 +13,7 @@ source("include/plspm.R")
 #
 
 debugPrint<-function(x){
-	# print(x)
+	print(x)
 }
 
 #
@@ -453,77 +453,12 @@ createdesignMatrix <- function(){
 }
 
 #
-# Combines results from lmer 
-#
-# Source:
-# http://www.rensenieuwenhuis.nl/r-sessions-31-combining-lmer-output-in-a-single-table/
-#
-
-combine.output.lmer <- function(models, labels=FALSE)
-{
-
-fix.coef <- lapply(models, function(x) summary(x)@coefs)
-var.coef <- lapply(models, function(x) summary(x)@REmat)
-n.par <- dim(summary(models[[1]])@coefs)[2]
-
-ifelse(labels==FALSE,
-fix.labels <- colnames(summary(models[[1]])@coefs),
-fix.labels <- labels)
-
-var.labels <- colnames(var.coef[[1]])
-
-# Creating table with fixed parameters
-output.coefs <- data.frame(Row.names=row.names(fix.coef[[1]]))
-for (i in 1:length(models))
-{
-
-a <- fix.coef[[i]]
-colnames(a) <- paste("Model", i, fix.labels)
-output.coefs <- merge(output.coefs, a, by.x=1, by.y=0, all=T, sort=FALSE)
-
-}
-output.coefs[,1] <- as.character(output.coefs[,1])
-output.coefs[dim(output.coefs)[1]+2, 1] <- "Loglikelihood"
-LL <- unlist(lapply(models, function(x) as.numeric(logLik(x))))
-output.coefs[dim(output.coefs)[1], 1:length(models)*n.par-n.par+2] <- LL
-
-# Creating table with random parameters
-output.vars <- data.frame(var.coef[[1]])[,1:2]
-for (i in 1:length(models))
-{
-
-a <- var.coef[[i]]
-colnames(a) <- paste("Model", i, var.labels)
-output.vars <- merge(output.vars, a, by.x=1:2, by.y=1:2, all=T, sort=FALSE)
-
-}
-
-# Combining output.coefs and output.vars
-n.cols <- dim(output.coefs)[2]
-n.coefs <- dim(output.coefs)[1]
-n.vars <- dim(output.vars)[1]
-
-output <- matrix(ncol=n.cols +1 , nrow=n.vars+n.coefs+2)
-
-output[1:n.coefs, -2] <- as.matrix(output.coefs)
-output[n.coefs+2, 1] <- "Variance Components"
-output[(n.coefs+3) : (n.coefs+n.vars+2), 1:2] <- as.matrix(output.vars[,1:2])
-output[
-(n.coefs+3) : (n.coefs+n.vars+2),
-which(rep(c(1,1,rep(0, n.par-2)),length(models))!=0)+2] <- as.matrix(output.vars[,c(-1,-2)])
-
-colnames(output) <- c("Parameter", "Random", colnames(output.coefs)[-1])
-
-return(output)
-}
-
-#
 # A small utility function to check memory use by object
 #
 
 displayMemory<-function(obs){
 	for(i in 1:length(obs)){
-		debugPrint(obs[i])
-		debugPrint(print(object.size(get(obs[i])),units="Mb"))
+		print(obs[i])
+		print(object.size(get(obs[i])),units="Mb")
 	}
 }

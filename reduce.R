@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 # The reducer receives a population model and tested model. It runs PLS and summed scales on all specified experimental conditions for these models and outputs the results as CSV. 
 
-#print("Starting reducer")
 
 source("include/parameters.R")
 source("include/functions.R")
@@ -18,10 +17,6 @@ con <- file("stdin", open = "r")
 
 while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
-#Debugging 
-
-#while(TRUE){
-#	line<-"1	1	9	1	0	0	-0.396709	0	1	-0.1043997	-0.1015976	0	-0.1043997	1	0	-0.396709	-0.1015976	0	1	NA	0	0	-0.396709	NA	NA	-0.1043997	-0.1015976	NA	NA	NA	0	NA	NA	NA	NA	NA	0	0	1	NA	NA	1	1	NA	NA	NA	0	NA	NA	NA	NA	NA	1	1	0	NA	NA	1	1	NA	NA	NA	1	NA	NA	NA	NA	NA	1	1	0	NA	NA	0	1	NA	NA	NA	1	NA	NA	NA	NA"
 
 	debugPrint(line)
 	

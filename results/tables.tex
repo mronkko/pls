@@ -247,7 +247,6 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 %\end{table}
 
 %\input{table11_full.tex}
-
 	
 \begin{table}[ht]
 \begin{center}
@@ -263,7 +262,27 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 \csname @@input\endcsname table11_body.tex
 
 \bottomrule
-\multicolumn{10}{l}{\footnotesize RMEL fixed effects regression. All continuous variables are standardized.  $^{ns}$= not significant at p$<$.001} \\
+\multicolumn{10}{l}{\footnotesize RMEL fixed effects regression. All non-categorical variables are standardized.  $^{ns}$= not significant at p$<$.001} \\
+\multicolumn{10}{l}{\footnotesize Dependent is the difference between pls estimates and mean of all estimates for a statistic.} \\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\begin{center}
+\caption{Regression analyses of factors affecting the relative performance of PLS}
+\begin{tabular}{lr@{ }r@{ }r@{ }r@{ }r@{ }r@{ }r@{ }r@{ }r}
+ \toprule
+&\multicolumn{2}{c@{ }}{Constructs}&\multicolumn{3}{c@{ }}{Correlations}&\multicolumn{2}{c@{ }}{Regressions}&\multicolumn{2}{c@{ }}{Error (p$<$.05)} \\
+\cmidrule(l{.75em}){2-3}\cmidrule(l{.75em}){4-6}\cmidrule(l{.75em}){7-8}\cmidrule(l{.75em}){9-10}
+&\multicolumn{1}{c@{ }}{Reliab.}&\multicolumn{1}{c@{ }}{Bias}&\multicolumn{1}{c@{ }}{Atten.}&\multicolumn{1}{c@{ }}{Bias}&\multicolumn{1}{c@{ }}{Error}&\multicolumn{1}{c@{ }}{ARE}&\multicolumn{1}{c@{ }}{SE}&\multicolumn{1}{c@{ }}{Type I}&\multicolumn{1}{c@{ }}{Type II} \\
+\midrule
+%%See http://newsgroups.derkeiler.com/Archive/Comp/comp.text.tex/2008-11/msg00090.html
+
+\csname @@input\endcsname table12_body.tex
+
+\bottomrule
+\multicolumn{10}{l}{\footnotesize RMEL fixed effects regression. All non-categorical variables are standardized.  $^{ns}$= not significant at p$<$.001} \\
 \multicolumn{10}{l}{\footnotesize Dependent is the difference between pls estimates and mean of all estimates for a statistic.} \\
 \end{tabular}
 \end{center}

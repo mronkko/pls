@@ -3,16 +3,9 @@
 # This file creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
 #
 
-setwd("/Users/mronkko/Documents/Research/pls")
 
-library(plspm)
-library(lattice)
-library(lavaan)
 library(car)
-library(foreign)
-library(lme4)
 library(QuantPsyc)
-library(gplots)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -34,7 +27,9 @@ labels<-list(
 	sumscale="Summed scales",
 	component="Components",
 	factor="Factors",
-	pls="PLS",
+	pls_Standard="PLS",
+	pls_IndividualSignChanges="PLS, Indicator sign correction",
+	pls_ConstructLevelChanges="PLS, Construct sign correction",
 	numberOfConstructs="Number of constructs",
 	expectedNumberOfOutgoingPaths="Expected number of paths",
 	populationPathValues="Population path values",
@@ -56,7 +51,12 @@ designMatrix<-createdesignMatrix()
 
 ######## FIGURE 4 ############
 
+print("Figure 4")
+
 if(!file.exists("results/figure4.pdf")){
+
+	library(lavaan)
+	
 	#
 	# The code below creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
 	#
@@ -160,10 +160,12 @@ B =~ b',paste(1:indicatorcount,collapse=" + b"),sep="")
 
 #Only read in this data if it is not in memory already. It takes a while to read
 
+print("ModelData")
 if( ! exists("modelData")){
 	modelData <- read.delim("data/models.csv")
 	print(summary(modelData))
 }
+print("ConstructData")
 
 if( ! exists("constructData")){
 	constructData <- read.delim("data/constructs.csv")
@@ -196,39 +198,48 @@ if( ! exists("constructData")){
 
 # Table 1 and Table 2 are specified manually
 
+# PLS is allocated the analysis types 4, 5, and 6. These are the different 
+# bootstrapping options. We use only analysis types 1-4 before we discuss
+# standard errors and type I and type II error rates
+
 ######## TABLE 3 ############
+print("Table 3")
 if(!file.exists("results/table3_full.tex")){
 	# General information about quality of measurement
 	
 	constructDataPlus<-merge(constructData,modelData,by=c("replication","analysis","designNumber"))
 	
-	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading","maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes,labels=labels)
+	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading","maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes[1:4],labels=labels)
 	
 	rm(constructDataPlus)
 }
 
 ######## TABLE 4 ############
+print("Table 4")
 
 if(!file.exists("results/table4_full.tex")){
 
-	# Construct score reliablity and validity (Hypothesis 1)
+	# Construct score reliablity and validity
 	
 
-	writeComparisonTable(constructData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(constructData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes[1:4],labels=labels)
 	
 	# Show the experimental conditions in which PLS was best
 }
+print("Table 5")
 
 ######## TABLE 5 ############
 
 if(!file.exists("results/table5_full.tex")){
 
-	# Construct score stability (Hypotheses 1)
+	# Construct score stability
 	
-	writeComparisonTable(constructData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(constructData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes[1:4],labels=labels)
 }
 
 #Only read in this data if it is not in memory already. It takes a while to read
+
+print("RelationshipData")
 
 if( ! exists("relationshipData")){
 	relationshipData <- read.delim("data/relationships.csv")
@@ -270,19 +281,20 @@ if( ! exists("relationshipData")){
 }
 
 ######## TABLE 6 ############
-
+print("Table 6")
 if(!file.exists("results/table6_full.tex")){
 
 	# Correlations (Hypothesis 2)
 	
 	# Attenuation and correlationBias
 
-	writeComparisonTable(relationshipData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes,labels=labels)
+	writeComparisonTable(relationshipData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes[1:4],labels=labels)
 }
 
 #
 # TODO: Check the stability of correlations across models and across data
 #
+print("Table 7")
 
 ######## TABLE 7 ############
 
@@ -296,6 +308,8 @@ if(!file.exists("results/table7_full.tex")){
 
 ######## TABLE 8 ) ############
 
+print("Table 8")
+
 
 if(!file.exists("results/table8_full.tex")){
 
@@ -307,6 +321,8 @@ if(!file.exists("results/table8_full.tex")){
 
 ######## TABLE 9 ############
 
+print("Table 9")
+
 if(!file.exists("results/table9_full.tex")){
 
 	# TYPE I and TYPE II error rate at .01
@@ -315,80 +331,26 @@ if(!file.exists("results/table9_full.tex")){
 
 }
 
-######## TABLE 10 ############
+
+print("Tables 10-11")
+
+######## TABLES 11-12 ############
+
+#
+# Two regression tables. First one has the non-bootstrapped results as 
+# dependents. Second has the boostrapped results (Standard and
+# Construct level changes)
+#
+# Independents and the design of the regressions are the same, so we do these in
+# a loop.
+# 
 
 if(!file.exists("results/table10_full.tex")){
 
-	dependents<-c("deltaR2","sdByData","correlationBias","correlationError","regressionARE","regressionSE","TypeI05","TypeI01","TypeII05","TypeII01")
+	library(lme4)
+
+	if(!exists("dependentGroups")){
 	
-	allVars<-c("analysis","designNumber",dependents)
-	
-	# Crosstabulate 
-	
-	tempdata<-aggregate(constructData[,intersect(names(constructData),allVars)], by=list(constructData$designNumber,constructData$analysis),  FUN=mean, na.rm=TRUE)
-	
-	tempdata<-merge(tempdata,aggregate(relationshipData[,intersect(names(relationshipData),allVars)], by=list(relationshipData$designNumber,relationshipData$analysis),  FUN=mean, na.rm=TRUE))
-
-	tempdata<-reshape(tempdata,v.names=dependents,idvar="designNumber",timevar="analysis",direction="wide")
-
-	#Order the data bu design number
-
-	tempdata<-tempdata[order(tempdata[,"designNumber"]),]
-
-	
-	tempdata2<-data.frame(tempdata[,"designNumber"])
-	
-	for(i in 1:length(dependents)){
-		
-		tempdata2[,dependents[i]]<-tempdata[,paste(dependents[i],4,sep=".")]==apply(tempdata[,paste(dependents[i],1:4,sep=".")],1,min)
-	}
-
-	# Merge the design numbers
-	
-
-	# Loop over dependents and generate vectors of frequencies
-	
-	resultTable<-NULL
-	for(i in 1:length(dependents)){
-		resultCol<-NULL
-		temp<-designMatrix[tempdata2[,dependents[i]]==TRUE,]
-		# Last column is the design number
-		for(i in 1:(ncol(temp)-1)){
-			for(k in 1:3){
-				resultCol<-c(resultCol,sum(temp[,i]==k)/243)
-			}
-		}
-		resultTable<-cbind(resultTable,matrix(resultCol,ncol=1))
-		
-	}
-	
-	#Add row names 
-	rownames<-
-	c(numberOfConstructs,expectedNumberOfOutgoingPaths,paste(populationPathValues),paste(omittedPathsShare*100,"%",sep=""),extraPaths,sampleSizes,indicatorCounts,factorLoadings,factorLoadingIntervals,maxErrorCorrelations,methodVariances)
-	
-	tableData<-data.frame(rownames,resultTable)
-	print(resultTable)
-
-	command<-NULL
-	pos<-NULL
-	for(i in 1:ncol(designMatrix)){
-		pos=c(pos,(i-1)*3)
-		command=c(command,paste("\\multicolumn{",length(dependents)+1,"}{l}{",labels[[colnames(designMatrix)[i]]],"}\\\\"))
-
-	}
-	
-	file="table10"
-	add.to.row=list(as.list(pos),command)
-	print(xtable(tableData,digits=3),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row)
-	print(xtable(tableData,digits=3),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
-hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row)
-}
-
-######## TABLES 11 ############
-
-if(!file.exists("results/table11_full.tex")){
-
-
 	# a huge regression table
 	# DEPENDENTS
 	# Constructs: reliability, bias
@@ -412,23 +374,28 @@ if(!file.exists("results/table11_full.tex")){
 	
 	correlationIndependents<-c("trueCorrelation","specifiedAsPath")
 	
-	regressionDependents<-c("regressionARE","regressionSE")
+	regressionDependents<-c("regressionARE")
 	
 	regressionIndependents<-c("regressionTrueScore")
 	
-	errorDependents<-c("TypeI05","TypeII05")
-	
-	relationshipIndependents=c(correlationIndependents,regressionIndependents)
-	relationshipDependents=c(correlationDependents,regressionDependents,errorDependents)
+	errorDependents<-c("regressionSE","TypeI05","TypeII05")
 
-	# Create two new datasets 
+	relationshipIndependents=c(correlationIndependents,regressionIndependents)
+	relationshipDependents=c(correlationDependents,regressionDependents)
+
+	#
+	# Create three new datasets 
+	#
 	constructsForRegression<-constructData[constructData$analysis==4,c("designNumber","replication","construct",constructIndependents)]
 
 	#Set TrueR2 to zero for exogenous variables
 	
 	constructsForRegression[is.na(constructsForRegression[,"trueR2"]),"trueR2"]<-0
 
-	temp<-aggregate(constructData[,c("designNumber","replication","construct",constructDependents)], by=list(constructData[,"designNumber"],constructData[,"replication"],constructData[,"construct"]),  FUN=mean, na.rm=TRUE)
+	print("Preparing construct dependents")
+	
+	# Take mean of all other analyses. (Each mean represents three different values)
+	temp<-aggregate(constructData[constructData$analysis<4,c("designNumber","replication","construct",constructDependents)], by=list(constructData[constructData$analysis<4,"designNumber"],constructData[constructData$analysis<4,"replication"],constructData[constructData$analysis<4,"construct"]),  FUN=mean, na.rm=TRUE)
 	
 	temp<-merge(constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"),temp)
 	
@@ -437,10 +404,11 @@ if(!file.exists("results/table11_full.tex")){
 	# The dependent is the difference between PLS estimate and mean of all estimates.
 	constructsForRegression<-merge(constructsForRegression,temp[,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"))
 
+	print("Preparing relationship dependents")
 
 	relationshipsForRegression<-relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipIndependents)]
 
-	temp<-aggregate(relationshipData[,c("designNumber","replication","to","from",relationshipDependents)], by=list(relationshipData[,"designNumber"],relationshipData[,"replication"],relationshipData[,"to"],relationshipData[,"from"]),  FUN=mean, na.rm=TRUE)
+	temp<-aggregate(relationshipData[relationshipData$analysis<4,c("designNumber","replication","to","from",relationshipDependents)], by=list(relationshipData[relationshipData$analysis<4,"designNumber"],relationshipData[relationshipData$analysis<4,"replication"],relationshipData[relationshipData$analysis<4,"to"],relationshipData[relationshipData$analysis<4,"from"]),  FUN=mean, na.rm=TRUE)
 	temp<-merge(relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"),temp)
 	
 	temp[,relationshipDependents]<-temp[,paste(relationshipDependents,"x",sep=".")]-temp[,paste(relationshipDependents,"y",sep=".")]
@@ -448,7 +416,35 @@ if(!file.exists("results/table11_full.tex")){
 	# The dependent is the difference between PLS estimate and mean of all estimates.
 	
 	relationshipsForRegression<-merge(relationshipsForRegression,temp[,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"))	
+
+
+	#
+	# Then do the error related things. These are a bit different since the PLS errors are estimated with three different approaches
+	#
+
+	print("Preparing error dependents")
 	
+	temp<-aggregate(relationshipData[relationshipData$analysis<4,c("designNumber","replication","to","from",errorDependents)], by=list(relationshipData[relationshipData$analysis<4,"designNumber"],relationshipData[relationshipData$analysis<4,"replication"],relationshipData[relationshipData$analysis<4,"to"],relationshipData[relationshipData$analysis<4,"from"]),  FUN=mean, na.rm=TRUE)
+
+
+	for(i in 4:6){	
+	
+		temp2<-merge(relationshipData[relationshipData$analysis==i,c("designNumber","replication","to","from",errorDependents)],by=c("designNumber","replication","to","from"),temp)
+	
+		temp2<-cbind(temp2[,c("designNumber","replication","to","from")],temp2[,paste(errorDependents,"x",sep=".")]-temp2[,paste(errorDependents,"y",sep=".")])
+		
+		names(temp2)<-c("designNumber","replication","to","from",paste(errorDependents,i,sep="_"))
+
+		temp<-merge(temp,temp2,by=c("designNumber","replication","to","from"))
+	
+		
+	}
+
+	relationshipsForRegression<-merge(relationshipsForRegression,temp[,c("designNumber","replication","to","from",paste(errorDependents,4,sep="_"),paste(errorDependents,5,sep="_"),paste(errorDependents,6,sep="_"))],by=c("designNumber","replication","to","from"))
+	
+	#
+	# Merge construct related things
+	#
 	relationshipsForRegression<-merge(relationshipsForRegression,constructsForRegression,by.x=c("replication","designNumber","to"),by.y=c("replication","designNumber","construct"))
 
 
@@ -482,30 +478,41 @@ if(!file.exists("results/table11_full.tex")){
 	
 	relationshipsForRegression[,"regressionTrueScore"]<-abs(relationshipsForRegression[,"regressionTrueScore"])
 	
-	#Standardixe the data to make it easier to interpret
+	#Standardize the data to make it easier to interpret
 	
 	temp<-setdiff(names(relationshipsForRegression),c("to","from","replication","desingNumber","populationPathValues","specifiedAsPath"))
 	relationshipsForRegression[,temp]<-Make.Z(relationshipsForRegression[,temp])
 
 	temp<-setdiff(names(constructsForRegression),c("replication","desingNumber","populationPathValues","specifiedAsPath"))
 	constructsForRegression[,temp]<-Make.Z(constructsForRegression[,temp])
+
+	print("Done all data preparations for regressions")
+	
+	
+
+	dependentGroups<-list(constructDependents,correlationDependents,regressionDependents,c(paste(errorDependents,4,sep="_"),paste(errorDependents,5,sep="_"),paste(errorDependents,6,sep="_")))
+
+	}
+	
+	print(dependentGroups)
+	
+	if(!exists("modelResults")){
 	modelResults<-NULL
-	
-	
-	dependentGroups<-list(constructDependents,correlationDependents,regressionDependents,errorDependents)
-	
+
 	for(dependentGroup in 1:length(dependentGroups)){
 		if(dependentGroup==1){
-			data<-constructsForRegression
+			data<-"constructsForRegression"
 		}
 		else{
-			data<-relationshipsForRegression
+			data<-"relationshipsForRegression"
 		}
 		
 		dependents<-dependentGroups[[dependentGroup]]
 		
 		for(dependent in 1:length(dependents)){
+
 			# One model with experimental conditions only and one model with everything
+
 			for(modelIndex in 1:2){
 				print(paste(dependentGroup,dependent,modelIndex))
 				independents <- designIndependents
@@ -527,21 +534,18 @@ if(!file.exists("results/table11_full.tex")){
 				if(dependentGroup>1 ) strFormula<-paste(strFormula," + (1|to) + (1|from)")	
 				
 				print(strFormula)
-				reg<-lm(as.formula(gsub(" \\+ \\(.*","",strFormula)),data=data)
+				reg<-lm(as.formula(gsub(" \\+ \\(.*","",strFormula)),data=get(data))
 				print("Normal regression")
-				print(reg)
+				print(summary(reg))
 				print("Variance inflation factors from normal regression")
 				print(vif(reg))
 				
-				lmr<-lmer(as.formula(strFormula),data=data)
-				
-				#TODO: Store only the results to save memory.
-				
-				modelResults<-c(modelResults,lmr)
+				modelResults<-c(modelResults,striplmer(lmer(as.formula(strFormula),data=get(data))))
+				print("Stored LMER results")
 			}
 		}
 	}
-	
+	}
 	tableData<-combine.output.lmer(modelResults)
 
 	#Print the csv table as latex. 
@@ -559,8 +563,6 @@ if(!file.exists("results/table11_full.tex")){
 	#Remove blanck lines
 	formattedTableData<-formattedTableData[!is.na(formattedTableData[1,]),]
 	
-	file<-"table11"
-	
 	
 	#Remove the intercept since it is zero
 	formattedTableData<-formattedTableData[2:nrow(formattedTableData),]
@@ -570,12 +572,125 @@ if(!file.exists("results/table11_full.tex")){
 	formattedTableData[1:12,2:10]<-evenCols
 	
 	add.to.row<-list(list(nrow(formattedTableData)-6,nrow(formattedTableData)-7),c("\\midrule ","\\midrule "))
+
+	# The first column contains the variable names
+	helpindex=length(c(constructDependents,correlationDependents,regressionDependents))+1
+	file<-"table10"
+	cols<-1:helpindex
 	
-	print(xtable(formattedTableData),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
-	print(xtable(formattedTableData),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
-	hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
+	print("table 1")
+	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
+
+	print("table 2")
+	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
+
+	file<-"table11"
+	cols<-c(1,(helpindex+2):ncol(formattedTableData))
+	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
+	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
 
 
+}
+
+
+#
+# Plot comparing the three PLS bootstrapping methods
+#
+
+if(!file.exists("results/figure5.pdf")){
+
+
+	#
+	# The code below creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
+	#
+	
+	# START OF TEST PARAMETERS
+	
+	replications<-50
+	sample<-100
+	indicatorcount<-4
+	factorloading<-.7
+	
+	# END OF TEST PARAMETERS. 
+	
+	#Initialize a data frame for the results
+	results<-data.frame(PLS=as.numeric(NA),sest=as.numeric(NA),seco=as.numeric(NA),sein=as.numeric(NA),Beta=as.numeric(NA))[rep(NA,replications),]
+	
+	#Make a sequence from 0 to 1 consisting of uniformly distributed elements. These are the latent regression coefficients in our tests.
+	
+	betas<-unlist((sequence(replications)-1)/(replications-1))*.5
+	
+	for(replication in 1:replications){
+	
+		print(paste("Running replication",replication))
+	
+		# GENERATE TEST DATA
+	
+		#Take the exogeneous latent variable from random distribution
+		A<-rnorm(sample)
+		
+		#Calculate the values for the endogenous latent variable
+	
+		B<-A*betas[[replication]]+rnorm(sample)*sqrt(1-betas[[replication]]^2)
+	
+		#Calculate indicator values and add these to data frame with meaningful names
+	
+		indicators<-data.frame(row.names =c(1:sample))
+		
+		for ( i in 1:indicatorcount){
+			indicators<-data.frame(indicators,A*factorloading+rnorm(sample)*sqrt(1-factorloading^2))
+			names(indicators)[[i]]<-paste("a",i,sep="")
+		}
+		for ( i in 1:indicatorcount){
+			indicators<-data.frame(indicators,B*factorloading+rnorm(sample)*sqrt(1-factorloading^2))
+			names(indicators)[[indicatorcount+i]]<-paste("b",i,sep="")
+	
+		}
+	
+		#Run PLS 
+	
+		innermodel<-array(c(0,1,0,0),c(2,2))
+	
+		outermodel <- list(1:indicatorcount,(1:indicatorcount)+indicatorcount)
+		modes = rep("A",2)
+	
+		tryCatch(
+			pls <- plspm(indicators,innermodel,outermodel, modes,boot.val=TRUE)
+				,correlationError = function(e){
+				print(e)
+				traceback()
+				continue<-1
+		})
+		
+		results$PLS[[replication]]<-pls$path.coefs[2]
+		results$sest[[replication]]<-pls$boot.all$Standard$paths$Std.Error
+		results$seco[[replication]]<-pls$boot.all$ConstructLevelChanges$paths$Std.Error
+		results$sein[[replication]]<-pls$boot.all$IndividualSignChanges$paths$Std.Error
+		results$Beta[[replication]]<-betas[[replication]]
+	
+	}
+	
+	
+	attach(results)
+	
+	pdf(file="results/figure5.pdf",height=4)
+	
+	par(mar=c(5, 1, 4, 1))
+	par(mfrow=c(1,3)) 
+	
+	errbar(Beta,PLS,PLS+2*sest,PLS-2*sest,ylab="",xlab="",yaxt="n" ,ylim=c(-0.3,0.8))
+	title(main="Standard")
+	abline(0, 1)
+
+	errbar(Beta,PLS,PLS+2*seco,PLS-2*seco,ylab="",xlab="", ylim=c(-0.3,0.8),yaxt="n")
+	title(main="Construct level")
+	abline(0, 1)
+
+	errbar(Beta,PLS,PLS+2*sein,PLS-2*sein,ylab="",xlab="",ylim=c(-0.3,0.8),yaxt="n")
+	title(main="Indicator level")
+	abline(0, 1)
+
+	dev.off()
 }
 
 ####### DISTRIBUTION PLOTS ########
@@ -595,20 +710,24 @@ if(!file.exists("results/figure5.pdf")){
 	par(mfrow=c(2,2)) 
 	
 	dataSample<-constructData
-	for(i in 1:length(analysisTypes)){
+	for(i in 1:4){
 
 		tempData <- dataSample[dataSample$analysis==i,]
 
 		samp<-sample(1:nrow(tempData),1000)
-
-		plot(tempData[samp,]$trueR2,tempData[samp,]$estimatedR2,xlab="Real R2",ylab="Estimated R2",main=labels[[analysisTypes[i]]])
+		plot(tempData[samp,]$trueConstructR2,tempData[samp,]$estimatedConstructR2,xlab=expression(paste(R^2," for true scores")),ylab=expression(paste(R^2," for construct estimates")),main=labels[[analysisTypes[i]]])
 		abline(0, 1)
 
 	}
 	dev.off()
 }
 
-if(!file.exists("results/figure6.pdf")){
+
+#
+# This figure is currently not used, so not calculated
+#
+
+if(!file.exists("results/figure6.pdf") & FALSE){
 	
 	# Do a distribution plot for p-value when there is no effect
 	
@@ -699,47 +818,27 @@ if(FALSE & !file.exists("results/figure7.pdf")){
 	#dev.off()
 }
 
-#
-# A plot of mean ARE and mean SE as a function of the true population value
-#
-#
-
-if(FALSE & !file.exists("results/figure8.pdf")){
+if(!file.exists("results/figure6.pdf")){
 	
-	# Do a distribution plot for p-value when there is no effect
+	# Do four of scatter plots
 	
-	#pdf(file="results/figure7.pdf")
+	pdf(file="results/figure6.pdf")
 	
 	
 	par(mfrow=c(2,2)) 
-	tempData<-relationshipData[relationshipData$analysis==4,c("regressionARE","regressionSE","regressionTrueScore")]
-
-	bandplot(tempData$regressionTrueScore,tempData$regressionARE)
-	bandplot(tempData$regressionTrueScore,tempData$regressionSE)
 	
-	tempData<-relationshipData[relationshipData$analysis==1,c("regressionARE","regressionSE","regressionTrueScore")]
+	dataSample<-constructData
+	for(i in 1:4){
 
-	bandplot(tempData$regressionTrueScore,tempData$regressionARE)
-	bandplot(tempData$regressionTrueScore,tempData$regressionSE)
-	
+		tempData <- dataSample[dataSample$analysis==i,]
 
-	#dev.off()
+		samp<-sample(1:nrow(tempData),1000)
+		plot(tempData[samp,]$trueConstructR2,tempData[samp,]$estimatedConstructR2,xlab=expression(paste(R^2," for true scores")),ylab=expression(paste(R^2," for construct estimates")),main=labels[[analysisTypes[i]]])
+		abline(0, 1)
+
+	}
+	dev.off()
 }
-
-#
-# Draw a plot of frequencies that a hypothesis that b is posite would be 
-# supported at different degrees of confidence.
-#
-# p values to use .10 .05 .01 .001
-#
-# Draw four plots, one for each method
-#
-
-
-
-
-
-
 
 
 
