@@ -12,7 +12,9 @@ writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 	command<-NULL
 	pos<-NULL
 	
-	# Each variable gets a block of the table
+	# Each variable gets a block of the table. The table in total has two "mega columns"
+	
+	tableTwoBlocks<-NULL
 	
 	for(i in 1:length(variables)){
 		tableRow<-NULL
@@ -23,9 +25,29 @@ writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 		}
 		colnames(tableRow)<-analysisTypes
 		tableRow<-data.frame(paste(probs*100,"%",sep=""),tableRow)
-		pos=c(pos,(i-1)*3)
+
+		if(i %% 2== 0){
+			tableData<-rbind(tableData,cbind(tableRow,tableRow))
+			pos=c(pos,(i/2-1)*3)
+			command=c(command,paste("\\multicolumn{",ncol(tableRow),"}{l}{",labels[[variables[i-1]]],"}&\\multicolumn{",ncol(tableRow),"}{l}{",labels[[varname]],"}\\\\"))
+		}
+		else{
+			tableOddBlock<-tableRow
+		}
+	}
+	
+	#If there are odd number of things to include, there is one "left over part"
+
+	if(length(variables) %% 2 ==1){
+		nullBlock<-matrix(rep(NA,ncol(tableRow)*nrow(tableRow)),ncol=ncol(tableRow))
+		
+		print(nullBlock)
+		
+		colnames(nullBlock)<-colnames(tableRow)
+		
+		tableData<-rbind(tableData,cbind(tableRow,nullBlock))
+		pos=c(pos,((i+1)/2-1)*3)
 		command=c(command,paste("\\multicolumn{",ncol(tableRow),"}{l}{",labels[[varname]],"}\\\\"))
-		tableData<-rbind(tableData,tableRow)
 	}
 	
 	add.to.row<-list(pos=as.list(pos),command=command)

@@ -15,11 +15,11 @@
 % Figures
 %
 
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.7\textwidth]{figure1}
-\caption{Decision tree to choose analysis approach for path models of constructs}
-\end{figure}
+%\begin{figure}[h!]
+%\centering
+%\includegraphics[width=0.7\textwidth]{figure1}
+%\caption{Decision tree to choose analysis approach for path models of constructs}
+%\end{figure}
 
 \begin{figure}[h!]
 \centering
@@ -39,11 +39,11 @@
 \caption{Comparison of parameter estimates with PLS, summed scales, and  SEM}
 \end{figure}
 
-\begin{figure}[h!]
-\centering
-\includegraphics[width=1\textwidth]{figure5}
-\caption{Estimated R2 over true R2}
-\end{figure}
+%\begin{figure}[h!]
+%\centering
+%\includegraphics[width=1\textwidth]{figure5}
+%\caption{Estimated R2 over true R2}
+%\end{figure}
 
 %\begin{figure}[h!]
 %\centering
@@ -57,23 +57,23 @@
 
 % Comparison of PLS with alternatives
 
-\begin{table}[ht]
-\begin{center}
-\caption{Comparison of three methods to estimate path models}
-\begin{tabular}{p{.25\textwidth}p{.25\textwidth}p{.25\textwidth}p{.25\textwidth}}
-\toprule
-&\multicolumn{1}{c}{PLS}&\multicolumn{1}{c}{Summed scales}&\multicolumn{1}{c}{SEM}\\
-&&\multicolumn{1}{c}{and regression}\\
-\midrule
-Estimating construct values&Construct values are estimated as weighted linear combinations of indicators.&Construct values are estimated as unweighted linear combination of indicators.&Construct values are not estimated. Constructs are treated as latent variables. \\ \noalign{\smallskip}
-Calculating path coefficients between the constructs&Separate OLS regression is run for each endogenous variable.&Separate OLS regression is run for each endogenous variable.& Model is expressed as a system of equations that is solved approximately by minimixing a fit function. \\ \noalign{\smallskip}
-Estimating standard errors for the model parameters&Standard errors are estimated by resampling the entire model.&Standard errors are estimated based on known probability distribution.&Standard errors are estimated based on known probability distribution. \\ 
-\bottomrule
-\footnotesize{Typical cases}\\
-\end{tabular}
-\end{center}
-\end{table}
-
+%\begin{table}[ht]
+%\begin{center}
+%\caption{Comparison of three methods to estimate path models}
+%\begin{tabular}{p{.25\textwidth}p{.25\textwidth}p{.25\textwidth}p{.25\textwidth}}
+%\toprule
+%&\multicolumn{1}{c}{PLS}&\multicolumn{1}{c}{Summed scales}&\multicolumn{1}{c}{SEM}\\
+%&&\multicolumn{1}{c}{and regression}\\
+%\midrule
+%Estimating construct values&Construct values are estimated as weighted linear combinations of indicators.&Construct values are estimated as unweighted linear combination of indicators.&Construct values are not estimated. Constructs are treated as latent variables. \\ \noalign{\smallskip}
+%Calculating path coefficients between the constructs&Separate OLS regression is run for each endogenous variable.&Separate OLS regression is run for each endogenous variable.& Model is expressed as a system of equations that is solved approximately by minimixing a fit function. \\ \noalign{\smallskip}
+%Estimating standard errors for the model parameters&Standard errors are estimated by resampling the entire model.&Standard errors are estimated based on known probability distribution.&Standard errors are estimated based on known probability distribution. \\ 
+%\bottomrule
+%\footnotesize{Typical cases}\\
+%\end{tabular}
+%\end{center}
+%\end{table}
+%
 
 % Experimental conditions
 
@@ -84,15 +84,15 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 \toprule
 &\multicolumn{1}{c}{Condition}&\multicolumn{1}{c}{Values}&\multicolumn{1}{c}{Rationale} \\
 \midrule
-1&Number of constructs in the model&4, 8, 12&Since PLS takes the structural model into account when estimating the construct scores, model complexity can affect the results. \\ \noalign{\smallskip}
+1&Number of constructs in the model&4, 8, 12&Since PLS takes the tested model into account when estimating the construct scores, model complexity can affect the results. \\ \noalign{\smallskip}
 2&Expected number of outgoing paths&1, 2, 3 \\ \noalign{\smallskip}
-3&Population path values&[-1,1],[0,1],[0]&PLS is often used to test models where all paths are positive. We wanted to test how it works if the pats are all zero or positive and negative with equal probability \\ \noalign{\smallskip}
+3&Population path values&[-1,1],[0,1],[0]&PLS is often used to test models where all paths are positive. I wanted to test how it works if the paths are all zero or positive and negative with equal probability \\ \noalign{\smallskip}
 \midrule
-4&Sample size&50, 100, 250&Although large sample size is required for parameter consistency, PLS is often argued to work well with small sample sizes. \\ \noalign{\smallskip}
+4&Sample size&50, 100, 250&Although large sample size is required for  consistency, PLS is often argued to work well with small sample sizes. \\ \noalign{\smallskip}
 \midrule
 5&Number of indicators per construct &3, 4, 6&Consistency at large criterion implies that the accuracy of PLS estimates depend on the number of indicators. \\ \noalign{\smallskip}
 6&Mean factor loading&.4, .6, .8&Reliability affects attenuation and also indirectly bias. \\ \noalign{\smallskip}
-7&Factor loading variation&0, .1, .2&PLS is assumed to be able to weight more reliable indicators more, so we needed to vary the indicator reliabilities. \\ \noalign{\smallskip}
+7&Factor loading variation&0, .1, .2&PLS is assumed to be able to weight more reliable indicators more, variation in indicator reliabilities should increase the measurement quality. \\ \noalign{\smallskip}
 8&Error correlations&0, .2, .4&PLS requires that there are no error correlations, although these are practically always present in the data. \\ \noalign{\smallskip}
 9&Method variance&0, .15, .3&PLS has been shown to be affected by common method variance. This is always potentially an issue with survey studies. \\ \noalign{\smallskip}
 \midrule
@@ -107,9 +107,9 @@ Estimating standard errors for the model parameters&Standard errors are estimate
 \begin{table}[ht]
 \begin{center}
 \caption{Statistics on measurement quality}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrlrrrr}
  \toprule
- & Sum sc.& Comp. & Factor & PLS \\
+ & Sum sc.& Comp. & Factor & PLS &  & Sum sc.& Comp. & Factor & PLS \\
 \midrule
 %See http://newsgroups.derkeiler.com/Archive/Comp/comp.text.tex/2008-11/msg00090.html
 \csname @@input\endcsname table3_body.tex

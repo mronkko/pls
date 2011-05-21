@@ -18,10 +18,10 @@ source("include/functionsTablesAndFigures.R")
 # Define labels for variables
 
 labels<-list(
-	CR="CR",
+	CR="Composite reliability",
 	AVE="Root AVE",
-	minFactorLoading="Minumum factor loading",
-	meanFactorLoading="Mean factor loading",
+	minFactorLoading="Minumum composite loading",
+	meanFactorLoading="Mean composite loading",
 	maxCrossLoading="Maximum cross loading",
 	AVEMinusMaxCorrelation="Root AVE - max correlation",
 	sumscale="Summed scales",
@@ -209,6 +209,9 @@ if(!file.exists("results/table3_full.tex")){
 	
 	constructDataPlus<-merge(constructData,modelData,by=c("replication","analysis","designNumber"))
 	
+	#TODO: Make meanSquareResidual needs to be taken a square root of
+	
+	constructDataPlus$SRMR<-sqrt(constructDataPlus$SRMR)
 	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading","maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes[1:4],labels=labels)
 	
 	rm(constructDataPlus)
