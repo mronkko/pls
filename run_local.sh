@@ -31,4 +31,4 @@ while read line; do
 		echo $line | ./reduce.R 
 		#> output/$COUNTER.csv &
 	fi
-done < file
+done < input.txt
