@@ -4,6 +4,12 @@
 # This file runs the analysis scripts on local computer
 #
 
+PATH=./R-2.13.0/bin:$PATH
+
+#Check that the R is correct
+which R
+R --version
+
 THREADS=20
 COUNTER=0
 
