@@ -13,7 +13,7 @@ source("include/plspm.R")
 #
 
 debugPrint<-function(x){
-	print(x)
+#	print(x)
 }
 
 #
