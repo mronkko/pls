@@ -9,7 +9,7 @@ COUNTER=0
 
 for line in $(cat input.txt); do 
 	let COUNTER=COUNTER+1
-	
+	echo $COUNTER
 	#Check that there are less threads running than the maximum limit
 	
 
