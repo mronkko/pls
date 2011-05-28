@@ -212,7 +212,7 @@ if(!file.exists("results/table3_full.tex")){
 	#TODO: Make meanSquareResidual needs to be taken a square root of
 	
 	constructDataPlus$SRMR<-sqrt(constructDataPlus$SRMR)
-	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading","maxCrossLoading","AVEMinusMaxCorrelation","GlobalGoF","meanSquareResiduals","SRMR"),file="table3",analysisTypes=analysisTypes[1:4],labels=labels)
+	writeDescriptivesTable(constructDataPlus,variables=c("CR","AVE","minFactorLoading","meanFactorLoading","maxCrossLoading","AVEMinusMaxCorrelation","meanSquareResiduals"),file="table3",analysisTypes=analysisTypes[1:4],labels=labels)
 	
 	rm(constructDataPlus)
 }

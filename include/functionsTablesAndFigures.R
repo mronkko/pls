@@ -27,9 +27,9 @@ writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 		tableRow<-data.frame(paste(probs*100,"%",sep=""),tableRow)
 
 		if(i %% 2== 0){
-			tableData<-rbind(tableData,cbind(tableRow,tableRow))
+			tableData<-rbind(tableData,cbind(tableOddBlock,tableRow))
 			pos=c(pos,(i/2-1)*3)
-			command=c(command,paste("\\multicolumn{",ncol(tableRow),"}{l}{",labels[[variables[i-1]]],"}&\\multicolumn{",ncol(tableRow),"}{l}{",labels[[varname]],"}\\\\"))
+			command=c(command,paste("\\multicolumn{",ncol(tableRow),"}{l}{",labels[[variables[i-1]]],"}&\\multicolumn{",ncol(tableRow),"}{@{}l}{",labels[[varname]],"}\\\\"))
 		}
 		else{
 			tableOddBlock<-tableRow

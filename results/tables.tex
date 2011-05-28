@@ -10,7 +10,7 @@
 \setlength{\evensidemargin}{-.5in}
 
 \begin{document}
-
+\pagestyle{empty}
 %
 % Figures
 %
@@ -23,19 +23,30 @@
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=1.1\textwidth]{figure2}
+%\includegraphics[width=1.1\textwidth]{figure2}
+\includegraphics[width=.32\textwidth,page=3]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=1]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=2]{PowerPointFigure.pdf}
+
 \caption{Variance component model of optimal solution and summed scales}
 \end{figure}
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=1.1\textwidth]{figure3}
+\includegraphics[width=.32\textwidth,page=3]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=4]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=5]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=6]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=7]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=8]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=9]{PowerPointFigure.pdf}
+\includegraphics[width=.32\textwidth,page=10]{PowerPointFigure.pdf}
 \caption{Variance component model of PLS analysis}
 \end{figure}
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=1\textwidth]{figure4}
+\includegraphics[width=\textwidth]{figure4}
 \caption{Comparison of parameter estimates with PLS, summed scales, and  SEM}
 \end{figure}
 
@@ -80,24 +91,24 @@
 \begin{table}[ht]
 \begin{center}
 \caption{Experimental conditions}
-\begin{tabular}{lp{.25\textwidth}p{.2\textwidth}p{.5\textwidth}}
+\begin{tabular}{llr}
 \toprule
-&\multicolumn{1}{c}{Condition}&\multicolumn{1}{c}{Values}&\multicolumn{1}{c}{Rationale} \\
+&\multicolumn{1}{c}{Condition}&\multicolumn{1}{c}{Values} \\
 \midrule
-1&Number of constructs in the model&4, 8, 12&Since PLS takes the tested model into account when estimating the construct scores, model complexity can affect the results. \\ \noalign{\smallskip}
-2&Expected number of outgoing paths&1, 2, 3 \\ \noalign{\smallskip}
-3&Population path values&[-1,1],[0,1],[0]&PLS is often used to test models where all paths are positive. I wanted to test how it works if the paths are all zero or positive and negative with equal probability \\ \noalign{\smallskip}
+1&Number of constructs in the model&4, 8, 12\\ 
+2&Expected number of outgoing paths&1, 2, 3\\ 
+3&Population path values&[-1,1],[0,1],[0]\\ 
 \midrule
-4&Sample size&50, 100, 250&Although large sample size is required for  consistency, PLS is often argued to work well with small sample sizes. \\ \noalign{\smallskip}
+4&Sample size&50, 100, 250\\ 
 \midrule
-5&Number of indicators per construct &3, 4, 6&Consistency at large criterion implies that the accuracy of PLS estimates depend on the number of indicators. \\ \noalign{\smallskip}
-6&Mean factor loading&.4, .6, .8&Reliability affects attenuation and also indirectly bias. \\ \noalign{\smallskip}
-7&Factor loading variation&0, .1, .2&PLS is assumed to be able to weight more reliable indicators more, variation in indicator reliabilities should increase the measurement quality. \\ \noalign{\smallskip}
-8&Error correlations&0, .2, .4&PLS requires that there are no error correlations, although these are practically always present in the data. \\ \noalign{\smallskip}
-9&Method variance&0, .15, .3&PLS has been shown to be affected by common method variance. This is always potentially an issue with survey studies. \\ \noalign{\smallskip}
+5&Number of indicators per construct &3, 4, 6\\ 
+6&Mean factor loading&.4, .6, .8\\ 
+7&Factor loading variation&0, .1, .2\\ 
+8&Error correlations&0, .2, .4\\ 
+9&Method variance&0, .15, .3\\ 
 \midrule
-10&Omitted paths&0\%, 25\%, 50\%&Misspecified models are needed for testing if the method generates false positives. \\ \noalign{\smallskip}
-11&Expected number of extra paths&0,1,2 \\
+10&Omitted paths&0\%, 25\%, 50\%\\ 
+11&Expected number of extra paths&0, 1, 2\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -107,7 +118,7 @@
 \begin{table}[ht]
 \begin{center}
 \caption{Statistics on measurement quality}
-\begin{tabular}{lrrrrlrrrr}
+\begin{tabular}{lrrrr@{\hspace{1cm}}lrrrr}
  \toprule
  & Sum sc.& Comp. & Factor & PLS &  & Sum sc.& Comp. & Factor & PLS \\
 \midrule
