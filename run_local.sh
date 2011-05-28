@@ -28,6 +28,7 @@ for line in $(cat input.txt); do
 	
 	if [ ! -e output/$COUNTER.csv ]; then
 		echo $line
-		echo $line | ./reduce.R > output/$COUNTER.csv &
+		echo $line | ./reduce.R 
+		#> output/$COUNTER.csv &
 	fi
 done
