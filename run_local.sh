@@ -13,7 +13,8 @@ R --version
 THREADS=20
 COUNTER=0
 
-for line in $(cat input.txt); do 
+while read line; do 
+	echo "Input line is: $line"
 	let COUNTER=COUNTER+1
 	echo $COUNTER
 	#Check that there are less threads running than the maximum limit
@@ -27,8 +28,7 @@ for line in $(cat input.txt); do
 	#Check that an output file does not already exist
 	
 	if [ ! -e output/$COUNTER.csv ]; then
-		echo "Input line is: $line"
 		echo $line | ./reduce.R 
 		#> output/$COUNTER.csv &
 	fi
-done
+done < file
