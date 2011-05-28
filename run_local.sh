@@ -27,7 +27,7 @@ for line in $(cat input.txt); do
 	#Check that an output file does not already exist
 	
 	if [ ! -e output/$COUNTER.csv ]; then
-		echo $line
+		echo "Input line is: $line"
 		echo $line | ./reduce.R 
 		#> output/$COUNTER.csv &
 	fi
