@@ -28,7 +28,6 @@ while read line; do
 	#Check that an output file does not already exist
 	
 	if [ ! -e output/$COUNTER.csv ]; then
-		echo $line | ./reduce.R 
-		#> output/$COUNTER.csv &
+		echo $line | nice ./reduce.R > output/$COUNTER.csv &
 	fi
 done < input.txt

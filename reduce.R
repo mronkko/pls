@@ -26,8 +26,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 	# Parse the specification for this set of replications
 
-	specification<-sapply(unlist(strsplit(line, split="\t")),as.numeric)
-
+	specification<-sapply(unlist(strsplit(line, split="[\t ]")),as.numeric)
+	debugPrint(length(specification))
 	
 	# First element is the replication number 
 	
