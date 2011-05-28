@@ -16,12 +16,12 @@ for line in $(cat input.txt); do
 	while [ `ps -C R | wc -l` -gt $THREADS ]; do
 		echo "More than $THREADS R processes running. Wait for some of them to exit before proceeding"
 		sleep 5
-	done	
+	done
 
 	#Check that an output file does not already exist
 	
-	if [ ! -e output/$COUNTER.csv ]; do
+	if [ ! -e output/$COUNTER.csv ]; then
 		echo $line
 		echo $line | ./reduce.R > output/$COUNTER.csv &
-	done
+	fi
 done
