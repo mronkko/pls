@@ -14,7 +14,6 @@ THREADS=20
 COUNTER=0
 
 while read line; do 
-	echo "Input line is: $line"
 	let COUNTER=COUNTER+1
 	echo $COUNTER
 	#Check that there are less threads running than the maximum limit
