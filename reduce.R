@@ -376,24 +376,20 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					trueScoreCorrelation<-thisCorrelations[row,trueScoreCol]
 	
 					# Delta R2 when other (linked) true scores added as predictors
-					
-					linkedConstructs<-which(testedModel[construct,]==1)|which(testedModel[,construct]==1)
-					
-					deltaR2constructs<-mat.regress(thisCorrelations,c(construct,linkedConstructs),thisConstructCol)$R2-trueScoreCorrelation^2
-
+		
 					# Delta R2 when other (linked) indicators are added as predictors
 					
+					linkedConstructs<-which(testedModel[construct,]==1 | testedModel[,construct]==1)
 					
-					c(construct,linkedConstructs)
 					
 					linkedIndicators<-NULL
 					
 					for( lc in linkedConstructs){
-						linkedIndicators<-(lc-1)*indicatorCount+2*constructs+1:indicatorCount
+						linkedIndicators<-c(linkedIndicators,(lc-1)*indicatorCount+2*constructCount+1:indicatorCount)
 					}
-					
-					write(paste(c(nrow(thisResults$constructs),construct,linkedConstructs,linkedIndicators),collapse=" "), stderr())
-					
+
+					deltaR2constructs<-mat.regress(thisCorrelations,c(construct,linkedConstructs),thisConstructCol)$R2-trueScoreCorrelation^2
+
 					deltaR2errors<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol)$R2-deltaR2constructs
 					
 					#
