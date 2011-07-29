@@ -307,7 +307,7 @@ estimateWithRegression<-function(model,data,method){
 	return(list(constructs=constructScores,paths=paths))
 }
 
-estimateWithPlspm<-function(model,data,doBootstrap){
+estimateWithPlspm<-function(model,data,bootstrapReplications){
 
 	# Uncomment this to run wihtout PLS
 	# return(NA)
@@ -329,7 +329,7 @@ estimateWithPlspm<-function(model,data,doBootstrap){
 
 	plsResults<-NULL
 	
-	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=doBootstrap)
+	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500,br=bootstrapReplications)
 	
 	# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
 	
