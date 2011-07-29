@@ -307,7 +307,7 @@ estimateWithRegression<-function(model,data,method){
 	return(list(constructs=constructScores,paths=paths))
 }
 
-estimateWithPlspm<-function(model,data,bootstrapReplications){
+estimateWithPlspm<-function(model,data,doBootstrap){
 
 	# Uncomment this to run wihtout PLS
 	# return(NA)
@@ -329,25 +329,43 @@ estimateWithPlspm<-function(model,data,bootstrapReplications){
 
 	plsResults<-NULL
 	
-	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500,br=bootstrapReplications)
+	plsResults<-plspm(data,model,outer, rep("A",constructCount), scheme= "path", iter=500, boot.val=doBootstrap)
 	
 	# "From","To","Estimated value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
 	
-	pathsStandard<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["Standard"]]$paths)
-	pathsIndicatorCorrection<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["IndividualSignChanges"]]$paths)
-	pathsConstructCorrection<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["ConstructLevelChanges"]]$paths)
+	if(doBootstrap){
+		pathsStandard<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["Standard"]]$paths)
+		pathsIndicatorCorrection<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["IndividualSignChanges"]]$paths)
+		pathsConstructCorrection<-cbind(sub("->.*","",rownames(plsResults$boot$paths)),sub(".*->","",rownames(plsResults$boot$paths)),plsResults$boot.all[["ConstructLevelChanges"]]$paths)
 	
 
-	colnames(pathsStandard)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
-	rownames(pathsStandard)<-c(1:nrow(pathsStandard))
-	colnames(pathsIndicatorCorrection)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
-	rownames(pathsIndicatorCorrection)<-c(1:nrow(pathsIndicatorCorrection))
-	colnames(pathsConstructCorrection)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
-	rownames(pathsConstructCorrection)<-c(1:nrow(pathsConstructCorrection))
+		colnames(pathsStandard)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+		rownames(pathsStandard)<-c(1:nrow(pathsStandard))
+		colnames(pathsIndicatorCorrection)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+		rownames(pathsIndicatorCorrection)<-c(1:nrow(pathsIndicatorCorrection))
+		colnames(pathsConstructCorrection)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+		rownames(pathsConstructCorrection)<-c(1:nrow(pathsConstructCorrection))
 
-	return(list(Standard=list(constructs=plsResults$latents,paths=pathsStandard),
-			IndividualSignChanges=list(constructs=plsResults$latents,paths=pathsIndicatorCorrection),
-			ConstructLevelChanges=list(constructs=plsResults$latents,paths=pathsConstructCorrection)))
+		return(list(Standard=list(constructs=plsResults$latents,paths=pathsStandard),
+				IndividualSignChanges=list(constructs=plsResults$latents,paths=pathsIndicatorCorrection),
+				ConstructLevelChanges=list(constructs=plsResults$latents,paths=pathsConstructCorrection)))
+	}
+
+	else{
+		pathsStandard<-NULL
+		for(c in 1:ncol(plsResults$path.coefs)){
+			for(r in 1:nrow(plsResults$path.coefs)){
+				if(plsResults$path.coefs[r,c]!=0){
+					pathsStandard<-rbind(pathsStandard,c(colnames(plsResults$path.coefs)[c],rownames(plsResults$path.coefs)[r],plsResults$path.coefs[r,c]))
+				}
+			}
+		}
+		colnames(pathsStandard)<-c("From","To","Estimate")
+		rownames(pathsStandard)<-c(1:nrow(pathsStandard))
+
+		return(list(Standard=list(constructs=plsResults$latents,paths=pathsStandard),IndividualSignChanges=NULL,ConstructLevelChanges=NULL))
+	
+	}
 }
 
 

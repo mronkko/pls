@@ -122,7 +122,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 #					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stdout())
 
 					tryCatch(
-						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,bootstrapReplications)
+						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,doBootstrap)
 						,error = function(e){
 							debugPrint(e)
 						}
