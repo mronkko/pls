@@ -221,7 +221,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 				# Write out the construct scores first
 				
-				for(i in 1:nrow(thisResults$constructs)
+				for(i in 1:nrow(thisResults$constructs)){
 					cat("S",replication,designNumber,analysis,thisResults$constructs[i,],thisResults$constructs[i,],sep="\t")
 					cat("\n")
 				}
