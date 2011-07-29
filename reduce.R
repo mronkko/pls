@@ -94,7 +94,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			#
 			#Print out the constructs and indicators
 			#
-			for(i in 1:nrow(data[[thisDesignRow[7]]]$indicators)
+			for(i in 1:nrow(data[[thisDesignRow[7]]]$indicators)){
 				cat("D",replication,designNumber,data[[thisDesignRow[7]]]$constructs[i,],data[[thisDesignRow[7]]]$indicators[i,],sep="\t")
 				cat("\n")
 			}
