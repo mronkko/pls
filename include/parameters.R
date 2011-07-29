@@ -30,5 +30,4 @@ methodVariances<-c(0,.1,.2)
 doBootstrap <- FALSE
 
 # Do not change this. 
-#analysisTypes<-c("sumscale","component","factor","pls_Standard","pls_IndividualSignChanges","pls_ConstructLevelChanges")
-analysisTypes<-c("sumscale","factor","pls_Standard")
+analysisTypes<-c("sumscale","component","factor","pls_Standard","pls_IndividualSignChanges","pls_ConstructLevelChanges")
