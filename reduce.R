@@ -381,7 +381,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 					# Delta R2 when other indicators are added as predictors
 					
-					write(paste(nrow(thisResults$constructs),1:constructCount,crossLoadingCols), stderr())
+					write(paste(c(nrow(thisResults$constructs),1:constructCount,crossLoadingCols),collapse=" "), stderr())
 
 					deltaR2errors<-mat.regress(thisCorrelations,c(1:constructCount,crossLoadingCols),thisConstructCol)$R2-deltaR2constructs
 					
