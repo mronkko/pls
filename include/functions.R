@@ -363,7 +363,7 @@ estimateWithPlspm<-function(model,data,doBootstrap){
 		colnames(pathsStandard)<-c("From","To","Estimate")
 		rownames(pathsStandard)<-c(1:nrow(pathsStandard))
 
-		return(list(Standard=list(constructs=plsResults$latents,paths=pathsStandard),IndividualSignChanges=NULL,ConstructLevelChanges=NULL))
+		return(list(Standard=list(constructs=plsResults$latents,paths=pathsStandard),IndividualSignChanges=NA,ConstructLevelChanges=NA))
 	
 	}
 }
