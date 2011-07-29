@@ -388,7 +388,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					
 					deltaR2constructs<-mat.regress(thisCorrelations,c(construct,linkedConstructs),thisConstructCol)$R2-trueScoreCorrelation^2
 
-					tryCatch(deltaR2errors<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol)$R2-deltaR2constructs, error = function(e){
+					tryCatch(deltaR2errors<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol)$R2-deltaR2constructs-trueScoreCorrelation^2, error = function(e){
 						
 						debugPrint(e)
 						debugPrint(paste(c(thisConstructCol,construct,linkedConstructs,linkedIndicators),collapse=" "))
