@@ -375,12 +375,9 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					
 					trueScoreCorrelation<-thisCorrelations[row,trueScoreCol]
 	
-					# Delta R2 when other (linked) true scores added as predictors
-		
-					# Delta R2 when other (linked) indicators are added as predictors
+					# Delta R2 when other (linked) true scores and other (linked) indicators are added as predictors
 					
 					linkedConstructs<-which(testedModel[construct,]==1 | testedModel[,construct]==1)
-					
 					
 					linkedIndicators<-NULL
 					
@@ -388,9 +385,15 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 						linkedIndicators<-c(linkedIndicators,(lc-1)*indicatorCount+2*constructCount+1:indicatorCount)
 					}
 
+					
 					deltaR2constructs<-mat.regress(thisCorrelations,c(construct,linkedConstructs),thisConstructCol)$R2-trueScoreCorrelation^2
 
-					deltaR2errors<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol)$R2-deltaR2constructs
+					tryCatch(deltaR2errors<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol)$R2-deltaR2constructs, error = function(e){
+						write(paste(c(thisConstructCol,construct,linkedConstructs,linkedIndicators),collapse=" "),stderr())
+						debugPrint(e)
+						deltaR2errors<<-NA
+					}
+				)
 					
 					#
 					# Calculate estimated R2 and true R2 when all linked constructs are used as predictors for this construct.
