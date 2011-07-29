@@ -118,8 +118,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			if(analysisTypes[analysis]=="pls_Standard" | analysisTypes[analysis]=="pls_IndividualSignChanges" | analysisTypes[analysis]=="pls_ConstructLevelChanges"){
 				if(analysisTypes[analysis]=="pls_Standard"){
 					#We need to print something periodically to avoid timeout. Write this to both stderr and stdout to be sure that we see what is going on
-					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stderr())
-					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stdout())
+#					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stderr())
+#					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stdout())
 
 					tryCatch(
 						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,doBootstrap)
@@ -381,6 +381,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 					# Delta R2 when other indicators are added as predictors
 					
+					write(paste(nrow(thisResults$constructs),1:constructCount,crossLoadingCols), stderr())
+
 					deltaR2errors<-mat.regress(thisCorrelations,c(1:constructCount,crossLoadingCols),thisConstructCol)$R2-deltaR2constructs
 					
 					#
