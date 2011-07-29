@@ -95,8 +95,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			#Print out the constructs and indicators
 			#
 			for(i in 1:nrow(data[[thisDesignRow[7]]]$indicators)){
-				cat("D",replication,designNumber,unlist(data[[thisDesignRow[7]]]$constructs[i,]),unlist(data[[thisDesignRow[7]]]$indicators[i,]),sep="\t")
-				cat("\n")
+				# cat("D",replication,designNumber,unlist(data[[thisDesignRow[7]]]$constructs[i,]),unlist(data[[thisDesignRow[7]]]$indicators[i,]),sep="\t")
+				#cat("\n")
 			}
 		}
 
@@ -222,8 +222,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				# Write out the construct scores first
 				
 				for(i in 1:nrow(thisResults$constructs)){
-					cat("S",replication,designNumber,analysis,unlist(thisResults$constructs[i,]),unlist(thisResults$constructs[i,]),sep="\t")
-					cat("\n")
+					#cat("S",replication,designNumber,analysis,unlist(thisResults$constructs[i,]),unlist(thisResults$constructs[i,]),sep="\t")
+					#cat("\n")
 				}
 				
 				
