@@ -90,6 +90,14 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 
 		if(is.null(data[[thisDesignRow[7]]])){
 			data[[thisDesignRow[7]]]<-generateData(constructTrueScores,indicatorCounts[thisDesignRow[7]],factorLoadings[thisDesignRow[8]],factorLoadingIntervals[thisDesignRow[9]],maxErrorCorrelations[thisDesignRow[10]],methodVariances[thisDesignRow[11]])
+			
+			#
+			#Print out the constructs and indicators
+			#
+			for(i in 1:nrow(data[[thisDesignRow[7]]]$indicators)
+				cat("D",replication,designNumber,data[[thisDesignRow[7]]]$constructs[i,],data[[thisDesignRow[7]]]$indicators[i,],sep="\t")
+				cat("\n")
+			}
 		}
 
 		tempPLS<-NA
@@ -114,7 +122,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					write(paste("I'm alive! - Running:",replication,designNumber,"Started at:",timeStarted," Time now:",Sys.time()), stdout())
 
 					tryCatch(
-						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators)
+						tempPLS <- estimateWithPlspm(testedModels[[thisDesignRow[5]]],data[[thisDesignRow[7]]]$indicators,doBootstrap)
 						,error = function(e){
 							debugPrint(e)
 						}
@@ -197,6 +205,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				standardDeviations<-rbind(standardDeviations,sds)
 			}
 		}
+		
 		for(designNumber in startIndex:endIndex){
 		
 			
@@ -209,14 +218,21 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 			# If the analysis did not converge, do not write anything
 			
 			if(! is.na(thisResults)){
-	
+
+				# Write out the construct scores first
+				
+				for(i in 1:nrow(thisResults$constructs)
+					cat("S",replication,designNumber,analysis,thisResults$constructs[i,],thisResults$constructs[i,],sep="\t")
+					cat("\n")
+				}
+				
+				
 				indicatorCount<-indicatorCounts[thisDesignRow[7]]
 
 				#
 				# Model and data level things: method variance analysis and model level fit indices
 				#
 			
-		
 				thisCorrelations <-cor(cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators))
 
 				thisPaths<-as.data.frame(thisResults$paths, stringsAsFactors = FALSE)
@@ -299,6 +315,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 				cat("M",replication,designNumber,analysis,SRMR,GlobalGoF,meanSquareResiduals,varianceExplainedCommonFactor,smallestPositiveCorrelation,secondSmallestPositiveCorrelation,sep="\t")
 				cat("\n")
 				
+				
 				#
 				# Construct level statistics first
 				#
@@ -360,7 +377,10 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 					# Delta R2 when other true scores added as predictors
 					
-					deltaR2<-mat.regress(thisCorrelations,1:constructCount,thisConstructCol)$R2-trueScoreCorrelation^2
+					deltaR2constructs<-mat.regress(thisCorrelations,1:constructCount,thisConstructCol,digits=5)$R2-trueScoreCorrelation^2
+
+					# Delta R2 when other indicators are added as predictors
+					deltaR2errors<-mat.regress(thisCorrelations,c(1:constructCount,which(!( allIndicatorCols %in% indicatorCols))),thisConstructCol,digits=5)$R2-deltaR2constructs
 					
 					#
 					# Calculate estimated R2 and true R2 when all linked constructs are used as predictors for this construct.
@@ -416,7 +436,7 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					# constructNumber and then the results
 					
 					
-					cat("C",replication,designNumber,analysis,construct,CR, AVE, minFactorLoading, meanFactorLoading, maxCrossLoading, maxCorrelationWithOtherConstruct, trueScoreCorrelation, deltaR2, estimatedR2, trueR2, trueConstructR2, estimatedConstructR2, sdByData, sdByModels, incomingPathsCorrect, incomingPathsExtra, incomingPathsOmitted, outgoingPathsCorrect, outgoingPathsExtra, outgoingPathsOmitted, sep="\t")
+					cat("C",replication,designNumber,analysis,construct,CR, AVE, minFactorLoading, meanFactorLoading, maxCrossLoading, maxCorrelationWithOtherConstruct, trueScoreCorrelation, deltaR2constructs, deltaR2errors, estimatedR2, trueR2, trueConstructR2, estimatedConstructR2, sdByData, sdByModels, incomingPathsCorrect, incomingPathsExtra, incomingPathsOmitted, outgoingPathsCorrect, outgoingPathsExtra, outgoingPathsOmitted, sep="\t")
 					cat("\n")
 				}
 				
