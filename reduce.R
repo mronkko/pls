@@ -377,10 +377,10 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	
 					# Delta R2 when other true scores added as predictors
 					
-					deltaR2constructs<-mat.regress(thisCorrelations,1:constructCount,thisConstructCol,digits=5)$R2-trueScoreCorrelation^2
+					deltaR2constructs<-mat.regress(thisCorrelations,1:constructCount,thisConstructCol)$R2-trueScoreCorrelation^2
 
 					# Delta R2 when other indicators are added as predictors
-					deltaR2errors<-mat.regress(thisCorrelations,c(1:constructCount,which(!( allIndicatorCols %in% indicatorCols))),thisConstructCol,digits=5)$R2-deltaR2constructs
+					deltaR2errors<-mat.regress(thisCorrelations,c(1:constructCount,which(!( allIndicatorCols %in% indicatorCols))),thisConstructCol)$R2-deltaR2constructs
 					
 					#
 					# Calculate estimated R2 and true R2 when all linked constructs are used as predictors for this construct.
