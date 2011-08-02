@@ -5,7 +5,7 @@
 
 print("Start of file")
 
-setwd("/Users/mronkko/Documents/Research/pls")
+#setwd("/Users/mronkko/Documents/Research/pls")
 
 #library(car)
 library(QuantPsyc)
