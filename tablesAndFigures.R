@@ -323,14 +323,16 @@ if(!file.exists("results/table3_full.tex")){
 	
 	file<-"table3"
 	
-	#regressionData<-constructData[,c("replication", "designNumber", "construct",  "analysis","trueScoreR2")]
-
-	#regressionData<-merge(regressionData[regressionData$analysis==4,], merge(regressionData[regressionData$analysis==1,], regressionData[regressionData$analysis==3,], by=c("replication", "designNumber", "construct")), by=c("replication", "designNumber", "construct"))
-
-	#regressionData<-merge(regressionData,designMatrix,by=c("designNumber"))
 	
-	regressionData$betterThanSS<-regressionData$trueScoreR2>regressionData$trueScoreR2.x
-	regressionData$betterThanFactor<-regressionData$trueScoreR2>regressionData$trueScoreR2.y
+	tempData<-aggregate(constructData[,c("designNumber","analysis","trueScoreR2")], by=list(constructData$designNumber,constructData$analysis),  FUN=mean, na.rm=TRUE)
+	
+
+	tempData<-merge(tempData[tempData$analysis==4,], merge(tempData[tempData$analysis==1,], tempData[tempData$analysis==3,], by=c("designNumber")), by=c("designNumber"))
+
+	tempData<-merge(tempData,designMatrix,by=c("designNumber"))
+	
+	tempData$betterThanSS<-tempData$trueScoreR2>tempData$trueScoreR2.x
+	tempData$betterThanFactor<-tempData$trueScoreR2>tempData$trueScoreR2.y
 
 	tableData<-NULL
 	
@@ -342,10 +344,10 @@ if(!file.exists("results/table3_full.tex")){
 		tableRow=data.frame(rownames=labels[[varname]])
 		
 		for(j in 1:3){
-			tableRow<-cbind(tableRow,mean(regressionData[regressionData[,varname]==j,"betterThanSS"]))
+			tableRow<-cbind(tableRow,sum(tempData[tempData[,varname]==j,"betterThanSS"]))
 		}
 		for(j in 1:3){
-			tableRow<-cbind(tableRow,mean(regressionData[regressionData[,varname]==j,"betterThanFactor"]))
+			tableRow<-cbind(tableRow,sum(tempData[tempData[,varname]==j,"betterThanFactor"]))
 		}
 		tableData<-rbind(tableData,tableRow)
 	}
@@ -355,6 +357,22 @@ if(!file.exists("results/table3_full.tex")){
 	hline.after=NULL,only.contents=TRUE,include.colnames=FALSE)
 }
 
+
+######## TABLE 3 ############
+#
+# Which interactions are sufficient to make PLS a better alternative than the
+# alternatives
+#
+
+print("Table 3")
+
+print("Comparing to summed scales")
+
+
+
+print("Comparing to factor scores")
+
+print("Comparing to both")
 
 
 err()
