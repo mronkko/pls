@@ -102,6 +102,48 @@ hline.after=NULL,only.contents=TRUE,include.colnames=FALSE)
 
 }
 
+
+writeAlternativeComparisonTable <- function(data,variables,file,analysisTypes,labels){
+
+	tableData<-NULL
+
+	tempdata<-aggregate(data[,c("designNumber","analysis",variables)], by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE)
+
+	comparisonData<-reshape(tempdata[,c("designNumber","analysis",variables)],v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
+
+
+	descriptiveData<-tempdata[tempdata$analysis==analysisTypes[1],]
+	
+	rm(tempdata)
+	
+	for(i in 1:length(variables)){
+		
+		varname<-variables[i]
+
+		tableRow=data.frame(rownames=labels[[varname]])
+		tableRow<-cbind(tableRow,mean(descriptiveData[,varname],na.rm=TRUE))
+		tableRow<-cbind(tableRow,t(quantile(descriptiveData[,varname],probs=c(0.05,0.5,0.95),na.rm=TRUE)))
+
+		for(j in 2:length(analysisTypes)){
+
+			# Calculate mean difference
+			
+			tableRow<-cbind(tableRow,mean(comparisonData[,paste(varname,analysisTypes[1],sep=".")]-comparisonData[,paste(varname,analysisTypes[j],sep=".")]))
+			
+			# Calculate how often this analysis results in larger results than every other analysis
+			tableRow<-cbind(tableRow,sum(comparisonData[,paste(varname,analysisTypes[1],sep=".")]>comparisonData[,paste(varname,analysisTypes[j],sep=".")]))
+
+	
+		}
+		tableData<-rbind(tableData,tableRow)
+	}
+	print(xtable(tableData),file=paste("results/",file,"_full.tex",sep=""))
+	print(xtable(tableData),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
+hline.after=NULL,only.contents=TRUE,include.colnames=FALSE)
+	return(tableData)
+
+}
+
 #
 # Strips lmer results to bare minimum that is required for drawing regression tables.
 #

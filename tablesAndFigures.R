@@ -40,10 +40,17 @@ labels<-list(
 	extraPaths="Extra paths",
 	sampleSize="Sample size",
 	indicatorCount="Indicators",
-	factorLoading="Meand factor loading",
+	factorLoading="Mean factor loading",
 	factorLoadingInterval="Factor loading variation",
 	maxErrorCorrelation="Max error correlations",
-	methodVariance="Method variances",GlobalGoF="Global goodness of fit",meanSquareResiduals="Indicator mean square residual",SRMR="SRMR")
+	methodVariance="Method variances",GlobalGoF="Global goodness of fit",meanSquareResiduals="Indicator mean square residual",
+	SRMR="SRMR",
+	trueScoreR2="Variance explained by true score",
+	deltaR2constructs="Add. variance explained by other constructs",
+	deltaR2errors="Add. variance explained by error terms",
+	totalR2="Total variance explained",
+	sdByData="SD of construct scores over three data",
+	sdByModels="SD of construct scores over three models")
 
 designMatrix<-createdesignMatrix()
 
@@ -113,8 +120,6 @@ if(!file.exists("results/figure2.pdf")){
 			indicators[i]<-Make.Z(indicators[i])
 		}
 		
-		print(cor(indicators))
-		
 		innermodel<-array(c(0,1,0,0),c(2,2))
 	
 		outermodel <- list(1:indicatorcount,(1:indicatorcount)+indicatorcount)
@@ -161,7 +166,7 @@ if(!file.exists("results/figure2.pdf")){
 	
 	attach(results)
 	
-	pdf(file="results/figure2.pdf",height=4)
+	pdf(file="results/figure2.pdf",width=10)
 	
 	par(mfrow=c(1,3)) 
 	
@@ -182,14 +187,28 @@ if( ! exists("modelData")){
 	modelData <- read.delim("data/models.csv")
 	print(summary(modelData))
 }
+
 print("ConstructData")
 
 if( ! exists("constructData")){
 	
 	print("start reading data")
-	library("sqldf")
-	constructData <- read.csv.sql("constructs.csv",sep="\t",row.names=FALSE,skip=c(7840052))
+	#library("sqldf")
+	#constructData <- read.csv.sql("constructs.csv",sep="\t",row.names=FALSE)
+	constructData <- read.delim("constructs.csv")
 	print("read data")
+	
+	#Only keep the rows that exist for all of the analysis types
+	
+	keep<-constructData[constructData$analysis==4,c("designNumber", "replication","construct")]
+	
+	constructData<-merge(constructData,keep)
+	
+	keep<-constructData[constructData$analysis==3,c("designNumber", "replication","construct")]
+	
+	constructData<-merge(constructData,keep)
+	rm(keep)
+	
 	#
 	# How frequently the correlation with true score is negative
 	#
@@ -211,8 +230,15 @@ if( ! exists("constructData")){
 	constructData$AVE<-sqrt(constructData$AVE)
 	constructData$AVEMinusMaxCorrelation<-constructData$AVE-constructData$maxCorrelationWithOtherConstruct
 	
-	constructData$deltaR2<-(constructData$deltaR2errors+constructData$deltaR2constructs-constructData$trueScoreCorrelation^2)/(constructData$trueScoreCorrelation^2)
 
+	constructData$trueScoreR2<-constructData$trueScoreCorrelation^2
+
+	constructData$deltaR2<-constructData$deltaR2errors+constructData$deltaR2constructs
+
+	#Merge the design parameters
+	
+	#constructData<-merge(constructData,designMatrix,by=c("designNumber"))
+	
 }
 
 #
@@ -221,49 +247,118 @@ if( ! exists("constructData")){
 
 if(!file.exists("results/figure3.pdf")){
 
-	pdf(file="results/figure2.pdf",height=4)
+	pdf(file="results/figure3.pdf",width=10)
 	
 	par(mfrow=c(1,2))
 
-	tpls<-constructData[constructData$analysis==4,]$trueScoreCorrelation^2
-	tpls<-sort(tpls)[1:length(tpls) %% 10 == 1]
-	tss<-constructData[constructData$analysis==1,]$trueScoreCorrelation^2
-	tss<-sort(tss)[1:length(tss) %% 10 == 1]
-	tf<-constructData[constructData$analysis==3,]$trueScoreCorrelation^2
-	tf<-sort(tf)[1:length(tf) %% 10 == 1]
+	tpls<-constructData[constructData$analysis==4,]$trueScoreR2
+	tpls<-sort(tpls)[1:length(tpls) %% 100 == 1]
+	tss<-constructData[constructData$analysis==1,]$trueScoreR2
+	tss<-sort(tss)[1:length(tss) %% 100 == 1]
+	tf<-constructData[constructData$analysis==3,]$trueScoreR2
+	tf<-sort(tf)[1:length(tf) %% 100 == 1]
 	
-	plot(tpls,1:length(tpls)/length(tpls),type="l",xlab="Share of variance explained by construct",ylab="Cumulative amount of observations")
+	print("1")
+
+	plot(1:length(tpls)/length(tpls),tpls,type="l",ylab="Share of variance explained by construct",xlab="Cumulative amount of observations")
 	minor.tick( )
 	grid()
-	lines(tss,1:length(tss)/length(tss),lty=2,type="l")
-	lines(tf,1:length(tf)/length(tf),lty=3,type="l")
+	lines(1:length(tss)/length(tss),tss,lty=2,type="l")
+	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
 	legend(0,1, c("PLS","Summed scales","Factor scores"),lty=c(1,2,3))
 	
-	tpls<-(constructData[constructData$analysis==4,]$deltaR2errors+constructData[constructData$analysis==4,]$deltaR2constructs-constructData[constructData$analysis==4,]$trueScoreCorrelation^2)/(constructData[constructData$analysis==4,]$trueScoreCorrelation^2)
-	tpls<-sort(tpls[!is.null(tpls)],decreasing = TRUE)[1:length(tpls) %% 10 == 1]
-	tss<-(constructData[constructData$analysis==1,]$deltaR2errors+constructData[constructData$analysis==1,]$deltaR2constructs-constructData[constructData$analysis==1,]$trueScoreCorrelation^2)/(constructData[constructData$analysis==1,]$trueScoreCorrelation^2)
-
-	tss<-sort(tss[!is.null(tss)],decreasing = TRUE)[1:length(tss) %% 10 == 1]
-	tf<-(z)
-	tf<-sort(tf[!is.null(tf)],decreasing = TRUE)[1:length(tf) %% 10 == 1]
 	
-	plot(tpls,1:length(tpls)/length(tpls),type="l",xlab="Relative share of variance explained by error",ylab="Cumulative amount of observations",xlim=rev(range(0,1)))
+	#Remove the constructs that are over fitted
+	constructData$predictors<-(constructData$incomingPathsCorrect+constructData$incomingPathsExtra+constructData$outgoingPathsCorrect+constructData$outgoingPathsExtra)*indicatorCounts[constructData$indicatorCount]
+
+	constructData$temp<-constructData$deltaR2+constructData$trueScoreR2
+
+	include<-(constructData$predictors*10)<sampleSizes[constructData$sampleSize]&constructData$temp<=1
+	
+	
+	tpls<-constructData[(constructData$analysis==4)&include,]$temp
+	tpls<-sort(tpls[!is.na(tpls)])[1:length(tpls) %% 100 == 1 | 1:length(tpls) == length(tpls)]
+
+	tss<-constructData[(constructData$analysis==1)&include,]$temp
+	tss<-sort(tss[!is.na(tss)])[1:length(tss) %% 100 == 1| 1:length(tss) == length(tss)]
+
+	tf<-constructData[(constructData$analysis==3)&include,]$temp
+	tf<-sort(tf[!is.na(tf)])[1:length(tf) %% 100 == 1 | 1:length(tf) == length(tf)]
+	
+	print("2")
+
+	plot(1:length(tpls)/length(tpls),tpls,type="l",ylab="Share of variance explained by all constructs and error terms",xlab="Cumulative amount of observations")
 	minor.tick( )
 	grid()
-	lines(tss,1:length(tss)/length(tss),lty=2,type="l")
-	lines(tf,1:length(tf)/length(tf),lty=3,type="l")
-
+	lines(1:length(tss)/length(tss),tss,lty=2,type="l")
+	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
 	dev.off()
 	
 	# How large percent of construct scores is more affected by measurement error than the actual constructs
 
-	print(paste("Summed scales: ",mean(tss>1)))
-	print(paste("Factor scores: ",mean(fs>1)))
-	print(paste("PLS: ",mean(pls>1)))
-
 }
 
+######## TABLE 2 ############
+#
+# Comparing the R2s and stability of measurement
+#
+
+print("Table 2")
+
+if(!file.exists("results/table2_full.tex")){
+	
+	constructData$totalR2<-constructData$deltaR2+constructData$trueScoreR2
+	writeAlternativeComparisonTable(constructData,variables=c("trueScoreR2","deltaR2constructs","deltaR2errors","totalR2","sdByData","sdByModels"),file="table2",analysisTypes=c(4,1,3),labels=labels)
+}
+
+######## TABLE 3 ############
+#
+# Regression analysis on variance explained by the correct construct and all 
+# other constructs and errors
+#
+
+print("Table 3")
+
+if(!file.exists("results/table3_full.tex")){
+	
+	file<-"table3"
+	
+	#regressionData<-constructData[,c("replication", "designNumber", "construct",  "analysis","trueScoreR2")]
+
+	#regressionData<-merge(regressionData[regressionData$analysis==4,], merge(regressionData[regressionData$analysis==1,], regressionData[regressionData$analysis==3,], by=c("replication", "designNumber", "construct")), by=c("replication", "designNumber", "construct"))
+
+	#regressionData<-merge(regressionData,designMatrix,by=c("designNumber"))
+	
+	regressionData$betterThanSS<-regressionData$trueScoreR2>regressionData$trueScoreR2.x
+	regressionData$betterThanFactor<-regressionData$trueScoreR2>regressionData$trueScoreR2.y
+
+	tableData<-NULL
+	
+	#The last column in design matrix is the design number
+	
+	for( i in 1:(ncol(designMatrix)-1)){
+		
+		varname<-colnames(designMatrix)[i]
+		tableRow=data.frame(rownames=labels[[varname]])
+		
+		for(j in 1:3){
+			tableRow<-cbind(tableRow,mean(regressionData[regressionData[,varname]==j,"betterThanSS"]))
+		}
+		for(j in 1:3){
+			tableRow<-cbind(tableRow,mean(regressionData[regressionData[,varname]==j,"betterThanFactor"]))
+		}
+		tableData<-rbind(tableData,tableRow)
+	}
+	
+	print(xtable(tableData),file=paste("results/",file,"_full.tex",sep=""))
+	print(xtable(tableData),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
+	hline.after=NULL,only.contents=TRUE,include.colnames=FALSE)
+}
+
+
+
 err()
+
 
 ######## TABLE 4 ############
 print("Table 4")
