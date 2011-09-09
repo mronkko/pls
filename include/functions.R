@@ -146,7 +146,7 @@ mvrnorm <- function (n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE)
 # "factorLoadings"
 #
 
-generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance){
+generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance,uncorrelatedRandomErrors=FALSE){
 
 	constructCount<-ncol(constructs)
 	sampleSize<-nrow(constructs)
@@ -188,6 +188,7 @@ generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingIn
 	R <- matrix((runif((constructCount*indicatorCount)^2)*2-1)*.1, ncol=constructCount*indicatorCount)
 	RtR <- R %*% t(R)
 	R<-cov2cor(RtR)	
+
 	# Scale the correlations with the maximum error correlation. Keep the diagonals as one
 	
 	R<-R*maxErrorCorrelation+(1-maxErrorCorrelation)*diag(indicatorCount*constructCount)
@@ -202,7 +203,7 @@ generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingIn
 	# Generate
 	# error terms
 	
-	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),errorCovarianceMatrix)
+	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),errorCovarianceMatrix,empirical=uncorrelatedRandomErrors)
 
 	
 	# Indicators are asum of the components
@@ -233,8 +234,8 @@ estimateWithRegression<-function(model,data,method){
 	sampleSize=nrow(data)
 	paths<-NULL
 	
-	#Form the construct scores
 	
+	#Form the construct scores
 	
 	constructScores<-data.frame(row.names =c(1:sampleSize))
 	
@@ -292,7 +293,62 @@ estimateWithRegression<-function(model,data,method){
 			for(k in 2:nrow(stdcoefficients)){
 				
 				#"From","To","Estimates value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA)
+				newrow<-data.frame(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA)
+
+				paths<-rbind(paths,newrow)
+			}
+		}
+	}
+	
+	colnames(paths)<-c("From","To","Estimate","Mean.Boot","Std.Error","perc.05","perc.95")
+	rownames(paths)<-c(1:nrow(paths))
+
+	#Return the construct scores and path estimates
+	
+	return(list(constructs=constructScores,paths=paths))
+}
+
+#
+# Estimates a path model with regression. Method is the name of the method used to generate the
+# construct scores. (sumscale, factor, component)
+#
+
+estimateWithRegressionUsingCovarianceMatrix<-function(model,data,sampleSize){
+	
+	constructCount=ncol(model)
+	paths<-NULL
+	
+	
+	#Use the correlation matrix to test the models
+	
+	modelRowSums<-rowSums(model,na.rm = TRUE)
+	
+	for ( i in 1:constructCount ){
+
+		#Only proceed with the regression if the variable is endogenous
+		
+		if(modelRowSums[i]>0){
+			
+			# Form the regression equation
+			
+			independents <-which(as.logical(model[i,]))
+			dependent<-i
+			
+			res<-mat.regress(data, independents, dependent,n.obs=sampleSize,digits=10)
+			
+			print(res)
+			err()
+			
+			#Store summary of the results as object. We will next extract the coefficients and their standard errors from this object
+
+			tempresults<-lm(formulaobj,data=constructScores)
+
+			stdcoefficients<-summary(tempresults)$coefficients
+
+			for(k in 2:nrow(stdcoefficients)){
+				
+				#"From","To","Estimates value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
+				newrow<-data.frame(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA)
 
 				paths<-rbind(paths,newrow)
 			}

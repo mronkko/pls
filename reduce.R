@@ -59,7 +59,8 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 	debugPrint("Genarate construct true scores")
 	
 	constructTrueScores <- mvrnorm(n=sampleSizes[designMatrix[[startIndex,4]]],rep(0,constructCount),populationModel$covariances)
-
+	
+	colnames(constructTrueScores)<-paste("T",c(1:constructCount),sep="")
 
 	# We have three data and tree models and will test all combinations. The
 	# identity column for models is column 5 and the identity column for
@@ -382,19 +383,59 @@ while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
 					linkedIndicators<-NULL
 					
 					for( lc in linkedConstructs){
-						linkedIndicators<-c(linkedIndicators,(lc-1)*indicatorCount+2*constructCount+1:indicatorCount)
+						linkedIndicators<-c(linkedIndicators,(lc-1)*indicatorCount+2*constructCount+(1:indicatorCount))
 					}
 
 					
-					deltaR2constructs<-mat.regress(thisCorrelations,c(construct,linkedConstructs),thisConstructCol)$R2-trueScoreCorrelation^2
+					reg<-mat.regress(thisCorrelations,c(construct,linkedConstructs),thisConstructCol)
+					print(paste("Analysis:",analysis))
+					print("True score")
+					print(trueScoreCorrelation^2)
+					print("Other constructs")
+					print(reg$R2)
+					deltaR2constructs<-reg$R2-trueScoreCorrelation^2
 
-					tryCatch(deltaR2errors<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol)$R2-deltaR2constructs-trueScoreCorrelation^2, error = function(e){
+					tryCatch(reg<-mat.regress(thisCorrelations,c(construct,linkedConstructs,linkedIndicators),thisConstructCol), error = function(e){
 						
 						debugPrint(e)
-						debugPrint(paste(c(thisConstructCol,construct,linkedConstructs,linkedIndicators),collapse=" "))
-						deltaR2errors<<-NA
+						
+						reg<<-NULL
 					}
-				)
+					)
+					if(!is.null(reg)){
+
+						print("Errors terms")
+						print(reg$R2)
+						deltaR2errors<-reg$R2-deltaR2constructs-trueScoreCorrelation^2
+					}
+
+				
+					# This is just for finding bugs
+					print("BUG hunting")
+					print(testedModel)
+					print(thisPaths)
+					
+					tempData<-cbind(constructTrueScores,thisResults$constructs,data[[thisDesignRow[7]]]$indicators)
+					
+					attach(tempData)
+					
+					modelStr <- paste("C",construct," ~ T",construct,sep="")
+					print(modelStr)
+					print(summary(lm(modelStr)))
+
+					modelStr <- paste(modelStr,paste("T",linkedConstructs,collapse=" + ",sep=""),sep=" + ")
+					
+					print(modelStr)
+					print(summary(lm(modelStr)))
+
+					modelStr <- paste(modelStr,paste("i",linkedIndicators-constructCount*2,collapse=" + ",sep=""),sep=" + ")
+					print(modelStr)
+					print(summary(lm(modelStr)))
+					
+					detach(tempData)
+				
+					# End of bug hunting
+					
 					
 					#
 					# Calculate estimated R2 and true R2 when all linked constructs are used as predictors for this construct.
