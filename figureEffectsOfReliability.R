@@ -29,8 +29,8 @@ source("include/functions.R")
 
 designMatrix<-createdesignMatrix()
 
-replications<-100
-maxThreads<-20
+replications<-10
+maxThreads<-10
 
 doOneReplication<-function(){
 
@@ -148,7 +148,7 @@ doOneReplication<-function(){
 			for(i in 1:constructCount){
 				indicatorBlock<-indicators$indicators[,((i-1)*indicatorCount+2):(i*indicatorCount)]
 				
-				alphas<-c(alphas,alpha(indicatorBlock)$std.alpha
+				alphas<-c(alphas,alpha(indicatorBlock)$std.alpha)
 				sumscales<-cbind(sumscales,rowSums(indicatorBlock))
 			}
 			
@@ -160,6 +160,9 @@ doOneReplication<-function(){
 			disattennuatedCorrelations<-sumscaleCorrelations/sqrt(alphas %o% alphas)
 			
 			# Calculate the tested model coefficients with disattennuated correlation coefficients
+			
+			tempres[[4]]<-estimateWithRegressionUsingCovarianceMatrix(testedModel,disattennuatedCorrelations,sampleSize)
+			
 			
 			for(c in 1:ncol(plsResults$path.coefs)){
 				for(r in 1:nrow(plsResults$path.coefs)){
@@ -174,12 +177,13 @@ doOneReplication<-function(){
 						# 5 Path coefficient with uncorrelated errors with regression
 						# 6 Final path coefficient estimated with regression
 						# 7 Path coefficient with uncorrelated errors with PLS
-						# 8 Final path coefficient estimated with PLS
+						# 8 Disattennuated regression coefficients
+						# 9 Final path coefficient estimated with PLS
 
 
 						datarow<-c(reliabilities[r,r],reliabilities[c,c],populationModel$paths[r,c],populationModel$covariances[r,c])
 
-						for(i in 1:3){
+						for(i in 1:4){
 							to<-tempres[[i]]$paths[,"To"]==paste("C",r,sep="")
 							from<-tempres[[i]]$paths[,"From"]==paste("C",c,sep="")
 							
@@ -213,7 +217,7 @@ if(!exists("dataobj")){
 	dataobj<-NULL
 
 	jobs<-list()
-	if(FALSE){
+
 	for(replicationNumber in 1:replications){
 		print(paste("Starting replication", replicationNumber))
 		
@@ -232,7 +236,7 @@ if(!exists("dataobj")){
 			jobs<-list()
 		}
 	}
-	}
+	
 	temp<-NULL
 	
 	for(replicationNumber in 1:replications){
@@ -266,12 +270,13 @@ for(r in 1:4){
 		flip<-(thisdata[,3]==abs(thisdata[,3]))*2-1
 		
 		plot(density(thisdata[,7]*flip),lty=2,main=NA,xlab=NA,ylab=NA)
-		lines(density(thisdata[,8]*flip),lty=1,type="l")
+		lines(density(thisdata[,9]*flip),lty=1,type="l")
 		lines(density(thisdata[,5]*flip),lty=2,type="l",col=rgb(0.7,0.7,0.7))
 		lines(density(thisdata[,6]*flip),lty=1,type="l",col=rgb(0.7,0.7,0.7))
+		lines(density(thisdata[,8]*flip),lty=4,type="l",col=rgb(0.7,0.7,0.7))
 		abline(v=(e-1)/10)
 		if(e==1 & r==1){
-			legend("topleft",c("PLS no errors","PLS w errors","SS no errors","SS w errors"),lty=c(2,1,2,1),col=c(rgb(0,0,0),rgb(0,0,0),rgb(0.7,0.7,0.7),rgb(0.7,0.7,0.7)))
+			legend("topleft",c("PLS no errors","PLS w errors","SS no errors","SS w errors","SS disattennuated"),lty=c(2,1,2,1,4),col=c(rgb(0,0,0),rgb(0,0,0),rgb(0.7,0.7,0.7),rgb(0.7,0.7,0.7),rgb(0.7,0.7,0.7)))
 		}
 	}
 }
