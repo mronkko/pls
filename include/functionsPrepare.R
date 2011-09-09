@@ -105,11 +105,16 @@ ensureThatModelIsValid<-function(model){
 # Returns a list of 
 #
 
-setPopulationModelPathValues <- function(populationModelWhichPaths,populationPathValues){
+setPopulationModelPathValues <- function(populationModelWhichPaths,populationPathValues,discrete=FALSE){
 	
 	
-	populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
-
+	if(! discrete){
+		populationModel<-populationModelWhichPaths*runif(populationModelWhichPaths^2,min=populationPathValues[1],max=populationPathValues[2])
+	}
+	else{
+		populationModel<-populationModelWhichPaths*sample(populationPathValues,length(populationModelWhichPaths), replace=TRUE)
+	}
+	
 	# Finally, we need to ensure that the model is valid. We do this by
 	# generating the population covariance matrix for the models by applying  # tracing rules, then setting the variances to 1 and testing if this is
 	# a valid correlation matrix

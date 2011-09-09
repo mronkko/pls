@@ -4,6 +4,26 @@
 
 library(xtable)
 
+
+testf<-function(dataa,variable,string,orderi,maxi,startvar){
+
+	factors<-c("numberOfConstructs", "expectedNumberOfOutgoingPaths", "populationPathValues", "omittedPathsShare", "extraPaths", "sampleSize", "indicatorCount", "factorLoading", "factorLoadingInterval", "maxErrorCorrelation", "methodVariance")
+
+#	print(string)
+
+	test<-mean(dataa[,variable])
+	if(test>0){
+		print(paste("FOUND:",string,test))
+	}
+	else if(orderi < maxi & startvar<=length(factors)){
+		for(f in startvar:length(factors)){
+			for( i in 1:3){
+				testf(dataa[dataa[factors[f]]==i,],variable,paste(string,"-",factors[f],":",i),orderi+1,maxi,f+1)
+			}
+		}
+	}
+}
+
 writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 
 	tableData<-NULL
