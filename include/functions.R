@@ -146,7 +146,7 @@ mvrnorm <- function (n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE)
 # "factorLoadings"
 #
 
-generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance){
+generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingInterval,maxErrorCorrelation,methodVariance,uncorrelatedRandomErrors=FALSE){
 
 	constructCount<-ncol(constructs)
 	sampleSize<-nrow(constructs)
@@ -188,6 +188,7 @@ generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingIn
 	R <- matrix((runif((constructCount*indicatorCount)^2)*2-1)*.1, ncol=constructCount*indicatorCount)
 	RtR <- R %*% t(R)
 	R<-cov2cor(RtR)	
+
 	# Scale the correlations with the maximum error correlation. Keep the diagonals as one
 	
 	R<-R*maxErrorCorrelation+(1-maxErrorCorrelation)*diag(indicatorCount*constructCount)
@@ -202,7 +203,7 @@ generateData <- function(constructs,indicatorCount,factorLoading,factorLoadingIn
 	# Generate
 	# error terms
 	
-	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),errorCovarianceMatrix)
+	errorTerms <- mvrnorm(n=sampleSize,rep(0,constructCount*indicatorCount),errorCovarianceMatrix,empirical=uncorrelatedRandomErrors)
 
 	
 	# Indicators are asum of the components
@@ -233,8 +234,8 @@ estimateWithRegression<-function(model,data,method){
 	sampleSize=nrow(data)
 	paths<-NULL
 	
-	#Form the construct scores
 	
+	#Form the construct scores
 	
 	constructScores<-data.frame(row.names =c(1:sampleSize))
 	
@@ -292,7 +293,7 @@ estimateWithRegression<-function(model,data,method){
 			for(k in 2:nrow(stdcoefficients)){
 				
 				#"From","To","Estimates value","Mean.Boot","Std.Error","perc.05","perc.95","ModelingTechnique"
-				newrow<-c(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA)
+				newrow<-data.frame(row.names(stdcoefficients)[k],dependent,stdcoefficients[[k,1]],NA,stdcoefficients[[k,2]],NA,NA)
 
 				paths<-rbind(paths,newrow)
 			}

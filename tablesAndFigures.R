@@ -50,7 +50,18 @@ labels<-list(
 	deltaR2errors="Add. variance explained by error terms",
 	totalR2="Total variance explained",
 	sdByData="SD of construct scores over three data",
-	sdByModels="SD of construct scores over three models")
+	sdByModels="SD of construct scores over three models",
+	regressionARE="Absolute relative error",
+	TypeI05 = "False positive, p<.05",
+	TypeI01 = "False positive, p<.01",
+	TypeI001 = "False positive, p<.001",
+	TypeII05 = "False negative, p<.05",
+	TypeII01 = "False negative, p<.01",
+	TypeII001 = "False negative, p<.001",
+	TypeIII05 = "Sig. eff. in the wrong dir., p<.05",
+	TypeIII01 = "Sig. eff. in the wrong dir., p<.01",
+	TypeIII001 = "Sig. eff. in the wrong dir., p<.001"
+	)
 
 designMatrix<-createdesignMatrix()
 
@@ -235,6 +246,8 @@ if( ! exists("constructData")){
 
 	constructData$deltaR2<-constructData$deltaR2errors+constructData$deltaR2constructs
 
+	constructData$totalR2<-constructData$trueScoreR2+constructData$deltaR2errors+constructData$deltaR2constructs
+	
 	#Merge the design parameters
 	
 	#constructData<-merge(constructData,designMatrix,by=c("designNumber"))
@@ -243,7 +256,8 @@ if( ! exists("constructData")){
 
 #
 # Two plots that show the 1) cumulative function of reliability and 2) the
-# cumulative function of ratio of addded R2 to reliability
+# density function of difference in reliabilities
+#
 
 if(!file.exists("results/figure3.pdf")){
 
@@ -252,50 +266,56 @@ if(!file.exists("results/figure3.pdf")){
 	par(mfrow=c(1,2))
 
 	tpls<-constructData[constructData$analysis==4,]$trueScoreR2
-	tpls<-sort(tpls)[1:length(tpls) %% 100 == 1]
+	tpls<-sort(tpls)[1:length(tpls) %% 1000 == 1| 1:length(tpls) == length(tpls)]
 	tss<-constructData[constructData$analysis==1,]$trueScoreR2
-	tss<-sort(tss)[1:length(tss) %% 100 == 1]
+	tss<-sort(tss)[1:length(tss) %% 100 == 1| 1:length(tss) == length(tss)]
 	tf<-constructData[constructData$analysis==3,]$trueScoreR2
-	tf<-sort(tf)[1:length(tf) %% 100 == 1]
+	tf<-sort(tf)[1:length(tf) %% 100 == 1| 1:length(tf) == length(tf)]
 	
 	print("1")
 
-	plot(1:length(tpls)/length(tpls),tpls,type="l",ylab="Share of variance explained by construct",xlab="Cumulative amount of observations")
+#	plot(1:length(tpls)/length(tpls),tpls,type="l",ylab="Share of variance explained by construct",xlab="Cumulative amount of observations")
+#	lines(1:length(tss)/length(tss),tss,lty=2,type="l")
+#	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
+
+	plot(density(tpls),type="l",ylab="Share of variance explained by construct",xlab="Cumulative amount of observations")
+	lines(density(tss),lty=2,type="l")
+	lines(density(tf),lty=3,type="l")
+
 	minor.tick( )
 	grid()
-	lines(1:length(tss)/length(tss),tss,lty=2,type="l")
-	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
 	legend(0,1, c("PLS","Summed scales","Factor scores"),lty=c(1,2,3))
 	
-	
-	#Remove the constructs that are over fitted
-	constructData$predictors<-(constructData$incomingPathsCorrect+constructData$incomingPathsExtra+constructData$outgoingPathsCorrect+constructData$outgoingPathsExtra)*indicatorCounts[constructData$indicatorCount]
+	#Plot the difference between reliabilities of summed scale and PLS and factor scores and PLS
 
-	constructData$temp<-constructData$deltaR2+constructData$trueScoreR2
+	tempData<-constructData[,c("designNumber","construct","replication","trueScoreR2","analysis")]
 
-	include<-(constructData$predictors*10)<sampleSizes[constructData$sampleSize]&constructData$temp<=1
-	
-	
-	tpls<-constructData[(constructData$analysis==4)&include,]$temp
-	tpls<-sort(tpls[!is.na(tpls)])[1:length(tpls) %% 100 == 1 | 1:length(tpls) == length(tpls)]
+	tempData<-merge(tempData[tempData$analysis==4,], merge(tempData[tempData$analysis==1,], tempData[tempData$analysis==3,], by=c("designNumber","construct","replication")), by=c("designNumber","construct","replication"))
 
-	tss<-constructData[(constructData$analysis==1)&include,]$temp
-	tss<-sort(tss[!is.na(tss)])[1:length(tss) %% 100 == 1| 1:length(tss) == length(tss)]
-
-	tf<-constructData[(constructData$analysis==3)&include,]$temp
-	tf<-sort(tf[!is.na(tf)])[1:length(tf) %% 100 == 1 | 1:length(tf) == length(tf)]
-	
 	print("2")
 
-	plot(1:length(tpls)/length(tpls),tpls,type="l",ylab="Share of variance explained by all constructs and error terms",xlab="Cumulative amount of observations")
+	tss<-tempData$trueScoreR2-tempData$trueScoreR2.x
+	tss<-sort(tss)[1:length(tss) %% 1000 == 1 | 1:length(tss) == length(tss)]
+	tf<-tempData$trueScoreR2-tempData$trueScoreR2.y
+	tf<-sort(tf)[1:length(tf) %% 1000 == 1| 1:length(tf) == length(tf)]
+	
+	#plot(1:length(tss)/length(tss),tss,type="l",ylab="Difference in variance explained by construct",xlab="Cumulative amount of observations",lty=2)
+
+	plot(density(tss),type="l",ylab="Difference in variance explained by construct",xlab="Cumulative amount of observations",lty=2)
 	minor.tick( )
 	grid()
-	lines(1:length(tss)/length(tss),tss,lty=2,type="l")
-	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
+	
+	#lines(1:length(tf)/length(tf),tf,lty=3,type="l")
+	lines(density(tf),lty=3,type="l")
+
+	legend(0,.2, c("PLS vs. summed scales","PLS vs. factor scores"),lty=c(2,3))
+
+
 	dev.off()
 	
 	# How large percent of construct scores is more affected by measurement error than the actual constructs
 
+	rm(tempData)
 }
 
 ######## TABLE 2 ############
@@ -307,14 +327,25 @@ print("Table 2")
 
 if(!file.exists("results/table2_full.tex")){
 	
-	constructData$totalR2<-constructData$deltaR2+constructData$trueScoreR2
-	writeAlternativeComparisonTable(constructData,variables=c("trueScoreR2","deltaR2constructs","deltaR2errors","totalR2","sdByData","sdByModels"),file="table2",analysisTypes=c(4,1,3),labels=labels)
+	constructDataCopy<-constructData[,c("designNumber","analysis","trueScoreR2","deltaR2constructs","deltaR2errors","totalR2","sdByData","sdByModels")]
+	constructDataCopy$totalR2<-constructData$deltaR2+constructData$trueScoreR2
+	
+	#Eliminate seriously over fitted data
+	
+	predictors<-(constructData$incomingPathsCorrect+constructData$incomingPathsExtra+constructData$outgoingPathsCorrect+constructData$outgoingPathsExtra)*indicatorCounts[constructData$indicatorCount]
+
+	include<-(predictors*5)<sampleSizes[constructData$sampleSize] & constructDataCopy$totalR2 < 1
+	
+	constructDataCopy[include,c("deltaR2errors","totalR2")]<-NA
+	writeAlternativeComparisonTable(constructDataCopy,variables=c("trueScoreR2","deltaR2constructs","deltaR2errors","totalR2","sdByData","sdByModels"),file="table2",analysisTypes=c(4,1,3),labels=labels)
+	
+	rm(constructDataCopy)
 }
 
 ######## TABLE 3 ############
 #
-# Regression analysis on variance explained by the correct construct and all 
-# other constructs and errors
+#
+#
 #
 
 print("Table 3")
@@ -331,8 +362,8 @@ if(!file.exists("results/table3_full.tex")){
 
 	tempData<-merge(tempData,designMatrix,by=c("designNumber"))
 	
-	tempData$betterThanSS<-tempData$trueScoreR2>tempData$trueScoreR2.x
-	tempData$betterThanFactor<-tempData$trueScoreR2>tempData$trueScoreR2.y
+	tempData$betterThanSS<-tempData$trueScoreR2-tempData$trueScoreR2.x
+	tempData$betterThanFactor<-tempData$trueScoreR2-tempData$trueScoreR2.y
 
 	tableData<-NULL
 	
@@ -341,64 +372,207 @@ if(!file.exists("results/table3_full.tex")){
 	for( i in 1:(ncol(designMatrix)-1)){
 		
 		varname<-colnames(designMatrix)[i]
-		tableRow=data.frame(rownames=labels[[varname]])
+		tableRow<-NULL
 		
 		for(j in 1:3){
-			tableRow<-cbind(tableRow,sum(tempData[tempData[,varname]==j,"betterThanSS"]))
+			tableRow<-c(tableRow,mean(tempData[tempData[,varname]==j,"betterThanSS"]))
 		}
 		for(j in 1:3){
-			tableRow<-cbind(tableRow,sum(tempData[tempData[,varname]==j,"betterThanFactor"]))
+			tableRow<-c(tableRow,mean(tempData[tempData[,varname]==j,"betterThanFactor"]))
 		}
-		tableData<-rbind(tableData,tableRow)
+		tableRow<-tableRow-c(rep(median(tableRow[1:3]),3),rep(median(tableRow[4:6]),3))
+		tableData<-rbind(tableData,data.frame(t(tableRow),row.names=labels[[varname]]))
+		
+		print(tableData)
 	}
 	
-	print(xtable(tableData),file=paste("results/",file,"_full.tex",sep=""))
-	print(xtable(tableData),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,
-	hline.after=NULL,only.contents=TRUE,include.colnames=FALSE)
+	print(xtable(tableData,digits=3),file=paste("results/",file,"_full.tex",sep=""))
+	print(xtable(tableData,digits=3),file=paste("results/",file,"_body.tex",sep=""),	hline.after=NULL,only.contents=TRUE,include.colnames=FALSE)
 }
 
 
-######## TABLE 3 ############
 #
 # Which interactions are sufficient to make PLS a better alternative than the
-# alternatives
+# alternatives. None of the first, second, third, or fourth order factorial 
+# interaction determine if PLS is better.
 #
 
-print("Table 3")
 
-print("Comparing to summed scales")
+if(FALSE){
 
+	regressionData<-constructData[,c("replication", "designNumber", "construct",  "analysis","trueScoreR2")]
 
+	regressionData<-merge(regressionData[regressionData$analysis==4,], merge(regressionData[regressionData$analysis==1,], regressionData[regressionData$analysis==3,], by=c("replication", "designNumber", "construct")), by=c("replication", "designNumber", "construct"))
 
-print("Comparing to factor scores")
-
-print("Comparing to both")
-
-
-err()
-
-
-######## TABLE 4 ############
-print("Table 4")
-
-if(!file.exists("results/table4_full.tex")){
-
-	# Construct score reliablity and validity
-
-	writeComparisonTable(constructData,variables=c("trueScoreCorrelation","deltaR2"),file="table4",analysisTypes=analysisTypes[c(1,3,4)],labels=labels)
+	regressionData<-merge(regressionData,designMatrix,by=c("designNumber"))
 	
-	# Show the experimental conditions in which PLS was best
+	regressionData$betterThanSS<-regressionData$trueScoreR2-regressionData$trueScoreR2.x
+	regressionData$betterThanFactor<-regressionData$trueScoreR2-regressionData$trueScoreR2.y
+
+	regressionData$betterThanBoth<-regressionData$trueScoreR2-max(regressionData$trueScoreR2.x,regressionData$trueScoreR2.y)
+
+	regressionData<-aggregate(regressionData,by=list(regressionData$designNumber),FUN=mean, na.rm=TRUE)
+	
+	testf(regressionData,"betterThanSS","betterThanSS",0,4,1)
+	testf(regressionData,"betterThanFactor","betterThanFactor",0,4,1)
+	testf(regressionData,"betterThanBoth","betterThanBoth",0,4,1)
+	
 }
 
-print("Table 5")
 
-######## TABLE 5 ############
+######## Figure 4 ############
 
-if(!file.exists("results/table5_full.tex")){
+print("Figure 4")
 
-	# Construct score stability
+if(!file.exists("results/figure4.pdf")){
+
+#	testData<-constructData[,c("replication", "designNumber", "construct",  "analysis","trueScoreR2","meanFactorLoading", "AVE", "CR")]
+
+#	testData<-merge(testData,modelData[,c("designNumber","replication","analysis","SRMR")],by=c("designNumber","replication","analysis"))
 	
-	writeComparisonTable(constructData,variables=c("sdByData","sdByModels"),file="table5",analysisTypes=analysisTypes[1:4],labels=labels)
+#	testData<-merge(testData[testData$analysis==4,], merge(testData[testData$analysis==1,], testData[testData$analysis==3,], by=c("replication", "designNumber", "construct")), by=c("replication", "designNumber", "construct"))
+
+	
+	# When is PLS better than summed scales or factor. 
+	
+	statistics<-c("meanFactorLoading","AVE","CR","SRMR")
+	
+	
+	pdf(file="results/figure4.pdf",width=10)
+	
+	par(mfrow=c(2,4))
+	
+	#Relative or absolute
+	for(i in 1:2){
+		
+		#Which statistic
+		for(j in 1:length(statistics)){
+		
+			#Sum scale or factor
+			for(k in 1:2){
+			
+				print(paste(i,j,k))
+				print(statistics[j])
+				testData$yvar<-testData$trueScoreR2>testData[,paste("trueScoreR2",c("x","y")[k],sep=".")]
+				
+				if(i==2){
+					
+					print("relative")
+					testData$xvar<-testData[,statistics[j]]-testData[,paste(statistics[j],c("x","y")[k],sep=".")]
+				}
+				else{
+					testData$xvar<-testData[,statistics[j]]
+				}
+				
+				mi<-min(testData$xvar)
+				ma<-max(testData$xvar)
+				testData$group<-round((testData$xvar-mi)/(ma-mi)*1000)
+				
+				print(summary(testData[c("xvar","yvar")]))
+				graphData<-aggregate(testData[,c("xvar","yvar")],by=list(testData$group),FUN=mean, na.rm=TRUE)
+
+				print(summary(graphData[c("xvar","yvar")]))
+				
+				smoothed<-loess.smooth(graphData$xvar,graphData$yvar, family = "gaussian",span=.25)
+				
+				if(k==1){
+					templabel<-statistics[j]
+					if(j==1){
+						templabel<-"Mean factor loading"
+					}
+					
+					if(i==1){
+						templabel<-paste(templabel,", absolute",sep="")
+					}
+					else{
+						templabel<-paste(templabel,", difference",sep="")
+
+					}
+					plot(smoothed$x,smoothed$y,type="l",xlab=templabel,ylab="Likelihood that PLS score is more reliable",ylim=c(0,1),lty=2)
+					grid()
+				}
+				else{
+					lines(smoothed$x,smoothed$y,lty=3,type="l")
+					if(j==1 & i==1){
+						legend(0,1, c("PLS vs. summed scales","PLS vs. factor scores"),lty=c(2,3))
+					}
+				}
+			}
+		}
+	}
+	dev.off()
+}
+
+if(!file.exists("results/table5_full.tex") & FALSE){
+
+#	testData<-constructData[,c("replication", "designNumber", "construct",  "analysis","trueScoreR2","meanFactorLoading", "AVE", "CR")]
+
+#	testData<-merge(testData,modelData[,c("designNumber","replication","analysis","SRMR")],by=c("designNumber","replication","analysis"))
+	
+#	testData<-merge(testData[testData$analysis==4,], merge(testData[testData$analysis==1,], testData[testData$analysis==3,], by=c("replication", "designNumber", "construct")), by=c("replication", "designNumber", "construct"))
+
+	
+	# When is PLS better than summed scales or factor. 
+	
+	statistics<-c("meanFactorLoading","AVE","CR","SRMR")
+	
+	
+	#Which statistic
+	for(j in 1:length(statistics)){
+	
+		#Sum scale or factor
+		for(k in 1:2){
+		
+			print(paste(i,j,k))
+			print(statistics[j])
+			testData$yvar<-testData$trueScoreR2>testData[,paste("trueScoreR2",c("x","y")[k],sep=".")]
+			
+			if(i==2){
+				
+				print("relative")
+				testData$xvar<-testData[,statistics[j]]-testData[,paste(statistics[j],c("x","y")[k],sep=".")]
+			}
+			else{
+				testData$xvar<-testData[,statistics[j]]
+			}
+			
+			mi<-min(testData$xvar)
+			ma<-max(testData$xvar)
+			testData$group<-round((testData$xvar-mi)/(ma-mi)*1000)
+			
+			print(summary(testData[c("xvar","yvar")]))
+			graphData<-aggregate(testData[,c("xvar","yvar")],by=list(testData$group),FUN=mean, na.rm=TRUE)
+
+			print(summary(graphData[c("xvar","yvar")]))
+			
+			smoothed<-loess.smooth(graphData$xvar,graphData$yvar, family = "gaussian",span=.25)
+			
+			if(k==1){
+				templabel<-statistics[j]
+				if(j==1){
+					templabel<-"Mean factor loading"
+				}
+				
+				if(i==1){
+					templabel<-paste(templabel,", absolute",sep="")
+				}
+				else{
+					templabel<-paste(templabel,", difference",sep="")
+
+				}
+				plot(smoothed$x,smoothed$y,type="l",xlab=templabel,ylab="Likelihood that PLS score is more reliable",ylim=c(0,1),lty=2)
+				grid()
+			}
+			else{
+				lines(smoothed$x,smoothed$y,lty=3,type="l")
+				if(j==1 & i==1){
+					legend(0,1, c("PLS vs. summed scales","PLS vs. factor scores"),lty=c(2,3))
+				}
+			}
+		}
+		
+	}
+	dev.off()
 }
 
 #Only read in this data if it is not in memory already. It takes a while to read
@@ -419,19 +593,6 @@ if( ! exists("relationshipData")){
 	relationshipData$t<-relationshipData$regressionEstimate/relationshipData$regressionSE
 	relationshipData$p<-(1-pt(abs(relationshipData$t),relationshipData$sampleSize-1))*2
 	
-	# Type I error is when the population regression coefficient is either zero 
-	# or of different sign than the estimated coefficient
-	
-	relationshipData$TypeI05<-relationshipData$p<=.05 & relationshipData$regressionEstimate*relationshipData$regressionTrueScore <=0
-	
-	relationshipData$TypeI01<-relationshipData$p<=.01 & relationshipData$regressionEstimate*relationshipData$regressionTrueScore <=0
-
-	# Type II error is when the population regression coefficient is different from zero but the p-value is non-significant sign than the estimated coefficient
-
-	relationshipData$TypeII05<-relationshipData$p>.05 & relationshipData$regressionTrueScore == 0
-
-	relationshipData$TypeII01<-relationshipData$p>.01 & relationshipData$regressionTrueScore == 0
-
 	# This is not strictly speaking the right way to determine if a path is 
 	# speficied because also non-convergent analyses result in NA estimates. 
 	# A more approriate way would be to read the tested model from MapReduce 
@@ -444,569 +605,119 @@ if( ! exists("relationshipData")){
 	
 }
 
-######## TABLE 6 ############
-print("Table 6")
-if(!file.exists("results/table6_full.tex")){
+if( ! exists("oldRelationshipData")){
+	oldRelationshipData <- read.delim("olddata2/relationships.csv")
+	oldRelationshipData$regressionARE<-abs(oldRelationshipData$regressionTrueScore-oldRelationshipData$regressionEstimate)
 
-	# Correlations (Hypothesis 2)
-	
-	# Attenuation and correlationBias
+	oldRelationshipData$correlationBias<-oldRelationshipData$estimatedCorrelation-oldRelationshipData$trueCorrelation*oldRelationshipData$correlationAttenuationCoefficient
+	oldRelationshipData$correlationError<-abs(oldRelationshipData$estimatedCorrelation-oldRelationshipData$trueCorrelation)
 
-	writeComparisonTable(relationshipData,variables=c("correlationAttenuationCoefficient","correlationBias","correlationError"),file="table6",analysisTypes=analysisTypes[1:4],labels=labels)
-}
-
-#
-# TODO: Check the stability of correlations across models and across data
-#
-print("Table 7")
-
-######## TABLE 7 ############
-
-if(!file.exists("results/table7_full.tex")){
-
-	# Regression coefficients (Hypothesis 3)
-	
-	# Precision and accuracy
-	writeComparisonTable(relationshipData,variables=c("regressionARE","regressionSE"),file="table7",analysisTypes=analysisTypes,labels=labels)
-}
-
-######## TABLE 8 ) ############
-
-print("Table 8")
-
-
-if(!file.exists("results/table8_full.tex")){
-
-	# TYPE I and TYPE II error rate at .05
-	
-	writeComparisonTable(relationshipData,variables=c("TypeI05","TypeII05"),file="table8",analysisTypes=analysisTypes,labels=labels)
-
-}
-
-######## TABLE 9 ############
-
-print("Table 9")
-
-if(!file.exists("results/table9_full.tex")){
-
-	# TYPE I and TYPE II error rate at .01
-
-	writeComparisonTable(relationshipData,variables=c("TypeI01","TypeII01"),file="table9",analysisTypes=analysisTypes,labels=labels)
-
-}
-
-
-print("Tables 10-11")
-
-######## TABLES 11-12 ############
-
-#
-# Two regression tables. First one has the non-bootstrapped results as 
-# dependents. Second has the boostrapped results (Standard and
-# Construct level changes)
-#
-# Independents and the design of the regressions are the same, so we do these in
-# a loop.
-# 
-
-if(!file.exists("results/table10_full.tex")){
-
-	library(lme4)
-
-	if(!exists("dependentGroups")){
-	
-	# a huge regression table
-	# DEPENDENTS
-	# Constructs: reliability, bias
-	# Correlations: attenuation, bias
-	# Regressions: ARE, SE
-	# Errors (.05): Type I  Type II
-
-	# Independents
-	# All experiment, construct, and relationship related covariates. Everything 
-	# that has been a dependent earlier in the model
-	
-	designIndependents<-c("numberOfConstructs","expectedNumberOfOutgoingPaths","populationPathValues","omittedPathsShare","extraPaths","sampleSize","indicatorCount","factorLoading","factorLoadingInterval","maxErrorCorrelation","methodVariance")
-	
-	constructDependents<-c("trueScoreCorrelation","deltaR2")
-	
-	# "minFactorLoading" is dropped due to collinearity
-	# TODO: Make the populationPAthValues a categorical variable.
-	 constructIndependents<-c("meanFactorLoading","maxCrossLoading","trueR2","incomingPathsCorrect","incomingPathsExtra","incomingPathsOmitted","outgoingPathsCorrect","outgoingPathsExtra","outgoingPathsOmitted")
-	
-	correlationDependents<-c("correlationAttenuationCoefficient","correlationBias","correlationError")
-	
-	correlationIndependents<-c("trueCorrelation","specifiedAsPath")
-	
-	regressionDependents<-c("regressionARE")
-	
-	regressionIndependents<-c("regressionTrueScore")
-	
-	errorDependents<-c("regressionSE","TypeI05","TypeII05")
-
-	relationshipIndependents=c(correlationIndependents,regressionIndependents)
-	relationshipDependents=c(correlationDependents,regressionDependents)
-
-	#
-	# Create three new datasets 
-	#
-	constructsForRegression<-constructData[constructData$analysis==4,c("designNumber","replication","construct",constructIndependents)]
-
-	#Set TrueR2 to zero for exogenous variables
-	
-	constructsForRegression[is.na(constructsForRegression[,"trueR2"]),"trueR2"]<-0
-
-	print("Preparing construct dependents")
-	
-	# Take mean of all other analyses. (Each mean represents three different values)
-	temp<-aggregate(constructData[constructData$analysis<4,c("designNumber","replication","construct",constructDependents)], by=list(constructData[constructData$analysis<4,"designNumber"],constructData[constructData$analysis<4,"replication"],constructData[constructData$analysis<4,"construct"]),  FUN=mean, na.rm=TRUE)
-	
-	temp<-merge(constructData[constructData$analysis==4,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"),temp)
-	
-	temp[,constructDependents]<-temp[,paste(constructDependents,"x",sep=".")]-temp[,paste(constructDependents,"y",sep=".")]
-	
-	# The dependent is the difference between PLS estimate and mean of all estimates.
-	constructsForRegression<-merge(constructsForRegression,temp[,c("designNumber","replication","construct",constructDependents)],by=c("designNumber","replication","construct"))
-
-	print("Preparing relationship dependents")
-
-	relationshipsForRegression<-relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipIndependents)]
-
-	temp<-aggregate(relationshipData[relationshipData$analysis<4,c("designNumber","replication","to","from",relationshipDependents)], by=list(relationshipData[relationshipData$analysis<4,"designNumber"],relationshipData[relationshipData$analysis<4,"replication"],relationshipData[relationshipData$analysis<4,"to"],relationshipData[relationshipData$analysis<4,"from"]),  FUN=mean, na.rm=TRUE)
-	temp<-merge(relationshipData[relationshipData$analysis==4,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"),temp)
-	
-	temp[,relationshipDependents]<-temp[,paste(relationshipDependents,"x",sep=".")]-temp[,paste(relationshipDependents,"y",sep=".")]
-	
-	# The dependent is the difference between PLS estimate and mean of all estimates.
-	
-	relationshipsForRegression<-merge(relationshipsForRegression,temp[,c("designNumber","replication","to","from",relationshipDependents)],by=c("designNumber","replication","to","from"))	
-
-
-	#
-	# Then do the error related things. These are a bit different since the PLS errors are estimated with three different approaches
-	#
-
-	print("Preparing error dependents")
-	
-	temp<-aggregate(relationshipData[relationshipData$analysis<4,c("designNumber","replication","to","from",errorDependents)], by=list(relationshipData[relationshipData$analysis<4,"designNumber"],relationshipData[relationshipData$analysis<4,"replication"],relationshipData[relationshipData$analysis<4,"to"],relationshipData[relationshipData$analysis<4,"from"]),  FUN=mean, na.rm=TRUE)
-
-
-	for(i in 4:6){	
-	
-		temp2<-merge(relationshipData[relationshipData$analysis==i,c("designNumber","replication","to","from",errorDependents)],by=c("designNumber","replication","to","from"),temp)
-	
-		temp2<-cbind(temp2[,c("designNumber","replication","to","from")],temp2[,paste(errorDependents,"x",sep=".")]-temp2[,paste(errorDependents,"y",sep=".")])
-		
-		names(temp2)<-c("designNumber","replication","to","from",paste(errorDependents,i,sep="_"))
-
-		temp<-merge(temp,temp2,by=c("designNumber","replication","to","from"))
-	
-		
-	}
-
-	relationshipsForRegression<-merge(relationshipsForRegression,temp[,c("designNumber","replication","to","from",paste(errorDependents,4,sep="_"),paste(errorDependents,5,sep="_"),paste(errorDependents,6,sep="_"))],by=c("designNumber","replication","to","from"))
-	
-	#
-	# Merge construct related things
-	#
-	relationshipsForRegression<-merge(relationshipsForRegression,constructsForRegression,by.x=c("replication","designNumber","to"),by.y=c("replication","designNumber","construct"))
-
-
-	relationshipsForRegression<-merge(relationshipsForRegression,constructsForRegression,by.x=c("replication","designNumber","from"),by.y=c("replication","designNumber","construct"),suffixes=c("",".from"))
-	
-	
-	
-	# Merge design related things
-	
-	relationshipsForRegression<-merge(relationshipsForRegression,designMatrix,by="designNumber")
-	constructsForRegression<-merge(constructsForRegression,designMatrix,by="designNumber")
-
-	print("Done merging data for regressions")
-	
-	# Run regressions for construct dependents
-	
-	# We need to adjust the cosntruct names, since C1 is not the same across replications
-	
-	relationshipsForRegression$to<-relationshipsForRegression$to+12*(relationshipsForRegression$replication*729+relationshipsForRegression$designNumber)
-	
-	relationshipsForRegression$from<-relationshipsForRegression$from+12*(relationshipsForRegression$replication*729+relationshipsForRegression$designNumber)
-	
-	
-	
-	# Recode some variables so that they make more sense in the regressions
-
-	relationshipsForRegression[,"populationPathValues"]<-factor(relationshipsForRegression[,"populationPathValues"],labels=c("[-.5,.5]","[0,.5]","[0]"))	
-	constructsForRegression[,"populationPathValues"]<-factor(constructsForRegression[,"populationPathValues"],labels=c("[-.5,.5]","[0,.5]","[0]"))
-
-	relationshipsForRegression[,"trueCorrelation"]<-abs(relationshipsForRegression[,"trueCorrelation"])
-	
-	relationshipsForRegression[,"regressionTrueScore"]<-abs(relationshipsForRegression[,"regressionTrueScore"])
-	
-	#Standardize the data to make it easier to interpret
-	
-	temp<-setdiff(names(relationshipsForRegression),c("to","from","replication","desingNumber","populationPathValues","specifiedAsPath"))
-	relationshipsForRegression[,temp]<-Make.Z(relationshipsForRegression[,temp])
-
-	temp<-setdiff(names(constructsForRegression),c("replication","desingNumber","populationPathValues","specifiedAsPath"))
-	constructsForRegression[,temp]<-Make.Z(constructsForRegression[,temp])
-
-	print("Done all data preparations for regressions")
-	
-	
-
-	dependentGroups<-list(constructDependents,correlationDependents,regressionDependents,c(paste(errorDependents,4,sep="_"),paste(errorDependents,5,sep="_"),paste(errorDependents,6,sep="_")))
-
-	}
-	
-	print(dependentGroups)
-	
-	if(!exists("modelResults")){
-	modelResults<-NULL
-
-	for(dependentGroup in 1:length(dependentGroups)){
-		if(dependentGroup==1){
-			data<-"constructsForRegression"
-		}
-		else{
-			data<-"relationshipsForRegression"
-		}
-		
-		dependents<-dependentGroups[[dependentGroup]]
-		
-		for(dependent in 1:length(dependents)){
-
-			# One model with experimental conditions only and one model with everything
-
-			for(modelIndex in 1:2){
-				print(paste(dependentGroup,dependent,modelIndex))
-				independents <- designIndependents
-
-				if(modelIndex>1){ 	
-					independents<-c(independents,constructIndependents)
-					if(dependentGroup>1) independents<-c(independents, paste(constructIndependents,"from",sep="."))
-					if(dependentGroup>2) independents<-c(independents,correlationIndependents)
-					if(dependentGroup>3) independents<-c(independents,regressionIndependents)
-				}
-				
-				# All regression and errorthings have "specifiedAsPath" as always positive, so it needs to be dropped 
-				if(dependentGroup>2){
-					independents<-setdiff(independents,"specifiedAsPath")
-				}
-				
-				strFormula<-paste(dependents[dependent]," ~ 1 + ",paste(independents, collapse=" + ",sep=" + ")," + (1| designNumber) + (1| replication)")
-
-				if(dependentGroup>1 ) strFormula<-paste(strFormula," + (1|to) + (1|from)")	
-				
-				print(strFormula)
-				reg<-lm(as.formula(gsub(" \\+ \\(.*","",strFormula)),data=get(data))
-				print("Normal regression")
-				print(summary(reg))
-				print("Variance inflation factors from normal regression")
-				print(vif(reg))
-				
-				modelResults<-c(modelResults,striplmer(lmer(as.formula(strFormula),data=get(data))))
-				print("Stored LMER results")
-			}
-		}
-	}
-	}
-	tableData<-combine.output.lmer(modelResults)
-
-	#Print the csv table as latex. 
-	formattedTableData<-tableData[,1]
-	
-	for(i in 1:((ncol(tableData)-2)/3)){
-		formattedTableData<-cbind(formattedTableData,format(round(as.numeric(tableData[,3*i]),digits=3),nsmall=3,scientific=FALSE,trim=TRUE,na.encode=TRUE))
-		ns<-abs(as.numeric(tableData[,3*i+2]))<qt(0.001,length(modelResults[[i]]@resid),lower.tail=FALSE)
-		ns[is.na(ns)]<-FALSE
-		formattedTableData[ns,i+1]<-paste(formattedTableData[ns,i+1],"$^{ns}$",sep="")
-	}
-
-	
-	formattedTableData[formattedTableData=="NA"]<-NA
-	#Remove blanck lines
-	formattedTableData<-formattedTableData[!is.na(formattedTableData[1,]),]
-	
-	
-	#Remove the intercept since it is zero
-	formattedTableData<-formattedTableData[2:nrow(formattedTableData),]
-	
-	evenCols<-formattedTableData[1:12,1:9*2]
-	formattedTableData<-formattedTableData[,1:10*2-1]
-	formattedTableData[1:12,2:10]<-evenCols
-	
-	add.to.row<-list(list(nrow(formattedTableData)-6,nrow(formattedTableData)-7),c("\\midrule ","\\midrule "))
-
-	# The first column contains the variable names
-	helpindex=length(c(constructDependents,correlationDependents,regressionDependents))+1
-	file<-"table10"
-	cols<-1:helpindex
-	
-	print("table 1")
-	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
-
-	print("table 2")
-	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
-
-	file<-"table11"
-	cols<-c(1,(helpindex+2):ncol(formattedTableData))
-	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_full.tex",sep=""),add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
-	print(xtable(formattedTableData[,cols]),file=paste("results/",file,"_body.tex",sep=""),include.rownames=FALSE,hline.after=NULL,only.contents=TRUE,include.colnames=FALSE,add.to.row=add.to.row,sanitize.text.function=function(x){return(x)})
-
-
-}
-
-
-#
-# Plot comparing the three PLS bootstrapping methods
-#
-
-if(!file.exists("results/figure5.pdf")){
-
-
-	#
-	# The code below creates a set of simulated data and runs PLS, SEM, and SummedScales on these.
-	#
-	
-	# START OF TEST PARAMETERS
-	
-	replications<-50
-	sample<-100
-	indicatorcount<-4
-	factorloading<-.7
-	
-	# END OF TEST PARAMETERS. 
-	
-	#Initialize a data frame for the results
-	results<-data.frame(PLS=as.numeric(NA),sest=as.numeric(NA),seco=as.numeric(NA),sein=as.numeric(NA),Beta=as.numeric(NA))[rep(NA,replications),]
-	
-	#Make a sequence from 0 to 1 consisting of uniformly distributed elements. These are the latent regression coefficients in our tests.
-	
-	betas<-unlist((sequence(replications)-1)/(replications-1))*.5
-	
-	for(replication in 1:replications){
-	
-		print(paste("Running replication",replication))
-	
-		# GENERATE TEST DATA
-	
-		#Take the exogeneous latent variable from random distribution
-		A<-rnorm(sample)
-		
-		#Calculate the values for the endogenous latent variable
-	
-		B<-A*betas[[replication]]+rnorm(sample)*sqrt(1-betas[[replication]]^2)
-	
-		#Calculate indicator values and add these to data frame with meaningful names
-	
-		indicators<-data.frame(row.names =c(1:sample))
-		
-		for ( i in 1:indicatorcount){
-			indicators<-data.frame(indicators,A*factorloading+rnorm(sample)*sqrt(1-factorloading^2))
-			names(indicators)[[i]]<-paste("a",i,sep="")
-		}
-		for ( i in 1:indicatorcount){
-			indicators<-data.frame(indicators,B*factorloading+rnorm(sample)*sqrt(1-factorloading^2))
-			names(indicators)[[indicatorcount+i]]<-paste("b",i,sep="")
-	
-		}
-	
-		#Run PLS 
-	
-		innermodel<-array(c(0,1,0,0),c(2,2))
-	
-		outermodel <- list(1:indicatorcount,(1:indicatorcount)+indicatorcount)
-		modes = rep("A",2)
-	
-		tryCatch(
-			pls <- plspm(indicators,innermodel,outermodel, modes,boot.val=TRUE)
-				,correlationError = function(e){
-				print(e)
-				traceback()
-				continue<-1
-		})
-		
-		results$PLS[[replication]]<-pls$path.coefs[2]
-		results$sest[[replication]]<-pls$boot.all$Standard$paths$Std.Error
-		results$seco[[replication]]<-pls$boot.all$ConstructLevelChanges$paths$Std.Error
-		results$sein[[replication]]<-pls$boot.all$IndividualSignChanges$paths$Std.Error
-		results$Beta[[replication]]<-betas[[replication]]
-	
-	}
-	
-	
-	attach(results)
-	
-	pdf(file="results/figure5.pdf",height=4)
-	
-	par(mar=c(5, 1, 4, 1))
-	par(mfrow=c(1,3)) 
-	
-	errbar(Beta,PLS,PLS+2*sest,PLS-2*sest,ylab="",xlab="",yaxt="n" ,ylim=c(-0.3,0.8))
-	title(main="Standard")
-	abline(0, 1)
-
-	errbar(Beta,PLS,PLS+2*seco,PLS-2*seco,ylab="",xlab="", ylim=c(-0.3,0.8),yaxt="n")
-	title(main="Construct level")
-	abline(0, 1)
-
-	errbar(Beta,PLS,PLS+2*sein,PLS-2*sein,ylab="",xlab="",ylim=c(-0.3,0.8),yaxt="n")
-	title(main="Indicator level")
-	abline(0, 1)
-
-	dev.off()
-}
-
-####### DISTRIBUTION PLOTS ########
-
-#
-# Show that the distribution of parameter estimates around the true value do not # follow the t-distribution. Use only data without method variance here and
-# include correctly specified models. Only data with 100 observations
-#
-
-if(!file.exists("results/figure5.pdf")){
-	
-	# Do four of distribution plots
-	
-	pdf(file="results/figure5.pdf")
-	
-	
-	par(mfrow=c(2,2)) 
-	
-	dataSample<-constructData
-	for(i in 1:4){
-
-		tempData <- dataSample[dataSample$analysis==i,]
-
-		samp<-sample(1:nrow(tempData),1000)
-		plot(tempData[samp,]$trueConstructR2,tempData[samp,]$estimatedConstructR2,xlab=expression(paste(R^2," for true scores")),ylab=expression(paste(R^2," for construct estimates")),main=labels[[analysisTypes[i]]])
-		abline(0, 1)
-
-	}
-	dev.off()
-}
-
-
-#
-# This figure is currently not used, so not calculated
-#
-
-if(!file.exists("results/figure6.pdf") & FALSE){
-	
-	# Do a distribution plot for p-value when there is no effect
-	
-	pdf(file="results/figure6.pdf")
-	
-	
-	par(mfrow=c(2,2)) 
-	
-	#Only use data where the relationship is very close to zero
-	dataSample<-relationshipData[abs(relationshipData$trueCorrelation)<.01,]
-	
 	tempMatrix<-data.frame(designNumber=1:729,designMatrix)
+	oldRelationshipData<-merge(oldRelationshipData,tempMatrix[,c("designNumber","sampleSize")])
 	
-	useDesigns<-tempMatrix[tempMatrix$methodVariance==1,]$designNumber
-
-	# Only use data without method variance
+	oldRelationshipData$sampleSize<-sampleSizes[oldRelationshipData$sampleSize]
+	oldRelationshipData$t<-oldRelationshipData$regressionEstimate/oldRelationshipData$regressionSE
+	oldRelationshipData$p<-(1-pt(abs(oldRelationshipData$t),oldRelationshipData$sampleSize-1))*2
 	
-	dataSample<-dataSample[dataSample$designNumber %in% useDesigns,]
+	# This is not strictly speaking the right way to determine if a path is 
+	# speficied because also non-convergent analyses result in NA estimates. 
+	# A more approriate way would be to read the tested model from MapReduce 
+	# input data or to test if the estimate is NA for all analysis types.
 	
-	# Remove NAs
-	dataSample<-dataSample[!is.na(dataSample$p),]
+
+	oldRelationshipData$specifiedAsPath<-!is.na(oldRelationshipData$regressionEstimate)
 	
-	for(i in 1:length(analysisTypes)){
 
-		tempData <- as.vector(dataSample[dataSample$analysis==i,"p"])
-		tempData <- tempData[order(tempData)]
-		
-		x<-((1:length(tempData)))/(length(tempData))
+	
+}
 
-		plot(x,tempData,xlab="Cumulative propability",ylab="Estimated value",main=labels[[analysisTypes[i]]],log="xy")
-		abline(0,1)
+#
+# Two plots that show the 1) cumulative function of reliability and 2) the
+# density function of difference in reliabilities
+#
 
-	}
+print("Figure 5")
+
+if(!file.exists("results/figure5.pdf")){
+
+	pdf(file="results/figure5.pdf",width=10)
+	
+	par(mfrow=c(1,2))
+
+	tpls<-relationshipData[relationshipData$analysis==4 & ! is.na(relationshipData$regressionARE),]$regressionARE
+	tpls<-sort(tpls)[1:length(tpls) %% 1000 == 1  | 1:length(tpls) ==length(tpls) ]
+	tss<-relationshipData[relationshipData$analysis==1 & ! is.na(relationshipData$regressionARE),]$regressionARE
+	tss<-sort(tss)[1:length(tss) %% 1000 == 1  | 1:length(tss) ==length(tss) ]
+	tf<-relationshipData[relationshipData$analysis==3 & ! is.na(relationshipData$regressionARE),]$regressionARE
+	tf<-sort(tf)[1:length(tf) %% 1000 == 1 | 1:length(tf) ==length(tf) ]
+	
+	print("1")
+
+	plot(1:length(tpls)/length(tpls),tpls,type="l",ylab="Absolute relative error",xlab="Cumulative amount of observations",ylim=c(0,1))
+	minor.tick( )
+	grid()
+	lines(1:length(tss)/length(tss),tss,lty=2,type="l")
+	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
+	legend(0,1, c("PLS","Summed scales","Factor scores"),lty=c(1,2,3))
+	
+	#Plot the difference between reliabilities of summed scale and PLS and factor scores and PLS
+
+	tempData<-relationshipData[,c("designNumber","to","from","replication","regressionARE","analysis")]
+
+	tempData<-merge(tempData[tempData$analysis==4,], merge(tempData[tempData$analysis==1,], tempData[tempData$analysis==3,], by=c("designNumber","to","from","replication")), by=c("designNumber","to","from","replication"))
+
+	print("2")
+
+	tss<-tempData$regressionARE-tempData$regressionARE.x
+	tss<-tss[!is.na(tss)]
+	tss<-sort(tss)[1:length(tss) %% 1000 == 1]
+	tf<-tempData$regressionARE-tempData$regressionARE.y
+	tf<-tf[!is.na(tf)]
+	tf<-sort(tf)[1:length(tf) %% 1000 == 1]
+	
+	plot(1:length(tss)/length(tss),tss,type="l",ylab="Difference in absolute relative error",xlab="Cumulative amount of observations",lty=2)
+	minor.tick( )
+	grid()
+	
+	lines(1:length(tf)/length(tf),tf,lty=3,type="l")
+	legend(0,.75, c("PLS vs. summed scales","PLS vs. factor scores"),lty=c(2,3))
+
+
 	dev.off()
+	
+	rm(tempData)
 }
 
-
+######## TABLE 2 ############
 #
-# Do a similar plot as the previous except that we check if the how many 
-# estimated standard errors there are between the true value and the estimate
-# and what is the probablity of getting the same from drawing from the
-# t-distribution.
+# Comparing the R2s and stability of measurement
 #
 
-#
-# TODO: Make this a QQ plot
-#
+print("Table 4")
 
-# There is something wrong with this figure. 
+if(!file.exists("results/table4_full.tex")){
+	
+	
+	# Type I error is when the population regression coefficient is either zero 
+	# or of different sign than the estimated coefficient
+	
+	oldRelationshipData$TypeI05<-oldRelationshipData$p<=.05 & (oldRelationshipData$regressionEstimate*oldRelationshipData$regressionTrueScore <=0)
+	
+	oldRelationshipData$TypeI01<-oldRelationshipData$p<=.01 & (oldRelationshipData$regressionEstimate*oldRelationshipData$regressionTrueScore <=0)
 
-if(FALSE & !file.exists("results/figure7.pdf")){
-	
-	# Do a distribution plot for p-value when there is no effect
-	
-	#pdf(file="results/figure7.pdf")
-	
-	
-	par(mfrow=c(2,2)) 
-	
-	useDesigns<-designMatrix[designMatrix[,"populationPathValues"]==3 & designMatrix[,"methodVariance"]==1 ,"designNumber"]
-	
-	# Only use data without method variance and the design with null effects
-	dataSample<-relationshipData[relationshipData$designNumber %in% useDesigns,c("regressionEstimate","regressionTrueScore","regressionSE","analysis")]
-	
-	print(summary(dataSample))
-	
+	oldRelationshipData$TypeI001<-oldRelationshipData$p<=.001 & (oldRelationshipData$regressionEstimate*oldRelationshipData$regressionTrueScore <=0)
 
-	# Calculate how many standard errors the true score is from the estimated score
-	dataSample$stat=(dataSample$regressionEstimate-dataSample$regressionTrueScore)/dataSample$regressionSE
-	
-	#Reverse cases where the regressionTrueScore is smaller than zero
-	dataSample$stat<-dataSample$stat*abs(dataSample$regressionTrueScore)/dataSample$regressionTrueScore
-	
-	
-	
-	
-	print(summary(dataSample))
-	
-	x <- seq(-1, 1, length=100)
-	
-	for(i in 1:length(analysisTypes)){
+	# Type II error is when the population regression coefficient is different from zero but the p-value is non-significant sign than the estimated coefficient
 
-		tempData <- as.vector(dataSample[dataSample$analysis==i,"regressionEstimate"])
-		
-		plot(density(tempData,na.rm=TRUE),main=labels[[analysisTypes[i]]])
-		lines(x, dt(x,100),col="lightgray")
-	}
-	#dev.off()
+	oldRelationshipData$TypeII05<-oldRelationshipData$p>.05 & oldRelationshipData$regressionTrueScore != 0
+
+	oldRelationshipData$TypeII01<-oldRelationshipData$p>.01 & oldRelationshipData$regressionTrueScore != 0
+
+	oldRelationshipData$TypeII001<-oldRelationshipData$p>.001 & oldRelationshipData$regressionTrueScore != 0
+
+	print("Prepared data")
+
+	writeAlternativeComparisonTable(oldRelationshipData,variables=c("regressionARE","TypeI01","TypeII01"),file="table4",analysisTypes=c(5,1,3),labels=labels)
+	
+	
 }
-
-if(!file.exists("results/figure6.pdf")){
-	
-	# Do four of scatter plots
-	
-	pdf(file="results/figure6.pdf")
-	
-	
-	par(mfrow=c(2,2)) 
-	
-	dataSample<-constructData
-	for(i in 1:4){
-
-		tempData <- dataSample[dataSample$analysis==i,]
-
-		samp<-sample(1:nrow(tempData),1000)
-		plot(tempData[samp,]$trueConstructR2,tempData[samp,]$estimatedConstructR2,xlab=expression(paste(R^2," for true scores")),ylab=expression(paste(R^2," for construct estimates")),main=labels[[analysisTypes[i]]])
-		abline(0, 1)
-
-	}
-	dev.off()
-}
-
-
-
-
-
-
-

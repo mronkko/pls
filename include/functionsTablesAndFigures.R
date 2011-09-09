@@ -4,6 +4,26 @@
 
 library(xtable)
 
+
+testf<-function(dataa,variable,string,orderi,maxi,startvar){
+
+	factors<-c("numberOfConstructs", "expectedNumberOfOutgoingPaths", "populationPathValues", "omittedPathsShare", "extraPaths", "sampleSize", "indicatorCount", "factorLoading", "factorLoadingInterval", "maxErrorCorrelation", "methodVariance")
+
+#	print(string)
+
+	test<-mean(dataa[,variable])
+	if(test>0){
+		print(paste("FOUND:",string,test))
+	}
+	else if(orderi < maxi & startvar<=length(factors)){
+		for(f in startvar:length(factors)){
+			for( i in 1:3){
+				testf(dataa[dataa[factors[f]]==i,],variable,paste(string,"-",factors[f],":",i),orderi+1,maxi,f+1)
+			}
+		}
+	}
+}
+
 writeDescriptivesTable <- function(data,variables,file,analysisTypes,labels){
 
 	tableData<-NULL
@@ -107,9 +127,15 @@ writeAlternativeComparisonTable <- function(data,variables,file,analysisTypes,la
 
 	tableData<-NULL
 
+	print("Start aggregate")
+	
 	tempdata<-aggregate(data[,c("designNumber","analysis",variables)], by=list(data$designNumber,data$analysis),  FUN=mean, na.rm=TRUE)
 
-	comparisonData<-reshape(tempdata[,c("designNumber","analysis",variables)],v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
+	print("Start merge")
+	
+	comparisonData<-merge(tempdata[tempdata$analysis==4,], merge(tempdata[tempdata$analysis==1,], tempdata[tempdata$analysis==3,], by=c("designNumber")), by=c("designNumber"))
+
+#	comparisonData<-reshape(tempdata[,c("designNumber","analysis",variables)],v.names=variables,idvar="designNumber",timevar="analysis",direction="wide")
 
 
 	descriptiveData<-tempdata[tempdata$analysis==analysisTypes[1],]
@@ -120,18 +146,28 @@ writeAlternativeComparisonTable <- function(data,variables,file,analysisTypes,la
 		
 		varname<-variables[i]
 
-		tableRow=data.frame(rownames=labels[[varname]])
-		tableRow<-cbind(tableRow,mean(descriptiveData[,varname],na.rm=TRUE))
+		tableRow<-data.frame(rownames=labels[[varname]])
+		td<-mean(descriptiveData[,varname],na.rm=TRUE)
+		
+		tableRow<-cbind(tableRow,td)
 		tableRow<-cbind(tableRow,t(quantile(descriptiveData[,varname],probs=c(0.05,0.5,0.95),na.rm=TRUE)))
 
 		for(j in 2:length(analysisTypes)){
 
+			print(paste("i =",i,"/",length(variables)," - j = ",j,"/",length(analysisTypes)))
+			
 			# Calculate mean difference
 			
-			tableRow<-cbind(tableRow,mean(comparisonData[,paste(varname,analysisTypes[1],sep=".")]-comparisonData[,paste(varname,analysisTypes[j],sep=".")]))
+			tableRow<-cbind(tableRow,mean(comparisonData[,varname]-comparisonData[,paste(varname,c("x","y")[j-1],sep=".")]))
+			
+			#tableRow<-cbind(tableRow,mean(comparisonData[,paste(varname,analysisTypes[1],sep=".")]-comparisonData[,paste(varname,analysisTypes[j],sep=".")]))
 			
 			# Calculate how often this analysis results in larger results than every other analysis
-			tableRow<-cbind(tableRow,sum(comparisonData[,paste(varname,analysisTypes[1],sep=".")]>comparisonData[,paste(varname,analysisTypes[j],sep=".")]))
+			
+			tableRow<-cbind(tableRow,sum(comparisonData[,varname]>comparisonData[,paste(varname,c("x","y")[j-1],sep=".")]))
+			tableRow<-cbind(tableRow,sum(comparisonData[,varname]<comparisonData[,paste(varname,c("x","y")[j-1],sep=".")]))
+		
+			#tableRow<-cbind(tableRow,sum(comparisonData[,paste(varname,analysisTypes[1],sep=".")]>comparisonData[,paste(varname,analysisTypes[j],sep=".")]))
 
 	
 		}
