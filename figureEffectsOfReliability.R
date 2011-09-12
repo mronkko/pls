@@ -9,6 +9,7 @@
 library(QuantPsyc)
 library(Hmisc)
 library(multicore)
+library(psych)
 
 # Read simulation parameters
 source("include/parameters.R")
@@ -206,8 +207,6 @@ doOneReplication<-function(){
 	#print(data)
 	return(dataobj)
 }
-
-
 
 rm("dataobj")
 
